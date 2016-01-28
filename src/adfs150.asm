@@ -3,30 +3,25 @@ CPU 1
 ;;                     ACORN ADFS 1.50 ROM DISASSEMBLY
 ;;                     ===============================
 ;;                   ADFS CODE COPYRIGHT ACORN COMPUTERS
-;; 
+;;
 ;;               DISASSEMBLY COMMENTARY COPYRIGHT J.G.HARSTON
 ;;               ============================================
-;; 
+;;
 ;; ROM HEADER
 ;; ==========
-       BRK              ;; No language entry
-       BRK
-       BRK
+       EQUB &00,&00,&00 ;; No language entry
        JMP L9ACE        ;; Jump to service handler
        EQUB &82         ;; Service ROM, 6502 code
        EQUB &17         ;; Offset to (C)
        EQUB &50         ;; Binary version number
        EQUS "Acorn ADFS" ;;ROM Title
-;;      6E 20 41 44 n AD
-;;      46 53       FS
        EQUB &00
        EQUS "150"       ;; Version string
        EQUB &00         ;; Copyright string
        EQUS "(C)1984"
-;; 8019 39 38 34    984
        EQUB &00
-;; 
-;; 
+;;
+;;
 ;; Claim Tube if present
 ;; ---------------------
 .L8020 LDY #&04
@@ -42,7 +37,7 @@ CPU 1
        JSR &0406        ;; Claim Tube
        BCC L8032        ;; Loop until claim successful
 .L8039 RTS
-;; 
+;;
 ;; Release Tube if used, and restore Screen settings
 ;; -------------------------------------------------
 .L803A BIT &CD
@@ -56,11 +51,11 @@ CPU 1
        STA &FE34        ;; Restore screen setting
 .L804F STZ &C2D7        ;; Clear screen flag
        RTS
-;; 
+;;
 ;; Check for screen memory
 ;; -----------------------
 ;; Put shadow screen memory into main memory if i/o address specifies &FFFExxxx
-;; 
+;;
 .L8053 PHY              ;; Save Y
        LDY &FE34        ;; Get current Screen setting
        STY &C2D7        ;; Save it
@@ -76,8 +71,8 @@ CPU 1
        TSB &FE34        ;; Put shadow RAM in memory
 .L806D PLY              ;; Restore Y
        RTS
-;; 
-;; 
+;;
+;;
 ;; DRIVE ACCESS ROUTINES
 ;; =====================
 ;; This is the SCSI subsystem. Access to drives 4 to 7 access floppy
@@ -85,7 +80,7 @@ CPU 1
 ;; SCSI devices 0 to 3 if a SCSI interface is present. If there is
 ;; no SCSI interface, access to drives 0 to 3 accesses floppy drives
 ;; 0 to 3.
-;; 
+;;
 ;; Read hard drive status. Waits for status value to settle before returning
 ;; -------------------------------------------------------------------------
 .L806F PHP
@@ -96,7 +91,7 @@ CPU 1
        BNE L8070        ;; Loop until status stays same
        PLP
        RTS
-;; 
+;;
 ;; Set SCSI to command mode
 ;; ------------------------
 .L807E LDY #&00         ;; Useful place to set Y=0
@@ -112,17 +107,17 @@ CPU 1
        AND #&02         ;; BUSY?
        BEQ L8091        ;; Loop until not BUSY
 .L8098 RTS
-;; 
+;;
 ;; Initialise retries value
 ;; ------------------------
 .L8099 LDA &C200        ;; Get default retries
        STA &CE          ;; Set current retries
        RTS
-;; 
-;; 
+;;
+;;
 .L809F JMP L82C9
-;; 
-;; 
+;;
+;;
 ;; Access a drive using SCSI protocol
 ;; ==================================
 ;; Transfer up to &FF00 bytes at a time
@@ -143,9 +138,9 @@ CPU 1
 ;;   XY+13  Length2
 ;;   XY+14  Length3
 ;;   XY+15
-;; 
+;;
 ;; On exit: A=result. 0=OK, <>0=error, with ADFS error block filled in
-;; 
+;;
 .L80A2 JSR L8328        ;; Wait for ensuring to complete
        STX &B0
        STY &B1          ;; &B0/1=>control block
@@ -158,10 +153,10 @@ CPU 1
        BEQ L80DF        ;; Jump directly to do it
        JSR L8099        ;; Set number of retries
        BPL L80D7        ;; Jump into middle of retry loop
-;; 
+;;
 ;; This loop tries to access a drive. If the action returns 'Not ready' it
 ;; retries a number of times, allowing interuption by an Escape event.
-;; 
+;;
 .L80BD JSR L80DF        ;; Do the specified command
        BEQ L8098        ;; Exit if ok
        CMP #&04         ;; Not ready?
@@ -177,13 +172,13 @@ CPU 1
        BNE L80C8        ;; Loop 256 times with X
        DEY
        BNE L80C8        ;; Loop 25 times with Y
-;; 
+;;
 .L80D7 CMP #&40         ;; Result=Write protected?
        BEQ L80DF        ;; Abort immediately
        DEC &CE          ;; Dec number of retries
        BPL L80BD        ;; Jump to try again
 ;;                                         Drop through to try once more
-;; 
+;;
 ;; Try to access a drive
 ;; ---------------------
 .L80DF LDY #&04
@@ -192,14 +187,14 @@ CPU 1
        DEY
        LDA (&B0),Y      ;; Get Addr2 - Screen bank
        JSR L8053        ;; Set I/O and Screen settings
-;; 
+;;
 ;; No hard drive present, drive 0 to 7 map onto floppies 0 to 3.
 ;; When hard drives are present, drives 4 to 7 map onto floppies 0 to 3.
-;; 
+;;
        LDA &CD          ;; Get ADFS I/O status
        AND #&20         ;; Hard drive present?
        BNE L8111        ;; Jump when hard drive present
-;; 
+;;
 ;; Access a floppy drive
 ;; ---------------------
 .L80F0 JSR LBA4B        ;; Do floppy operation
@@ -218,22 +213,22 @@ CPU 1
        PLA              ;; Restore result
        STA &C2D3        ;; Store
 .L8110 RTS
-;; 
+;;
 ;; ADFS Error Information:
 ;;   &C2D0 Sector b0-b7
 ;;   &C2D1 Sector b8-b15
 ;;   &C2D2 Sector b16-b19 and Drive
 ;;   &C2D3 SCSI error number
 ;;   &C2D4 Channel number if &C2D3.b7=1
-;; 
-;; 
+;;
+;;
 ;; Hard drive hardware is present. Check what drive is being accessed.
-;; 
+;;
 .L8111 LDY #&06
        LDA (&B0),Y      ;; Get drive
        ORA &C317        ;; OR with current drive
        BMI L80F0        ;; Jump back with 4,5,6,7 as floppies
-;; 
+;;
 ;; Access a hard drive via the SCSI interface
 ;; ------------------------------------------
        JSR L807E        ;; Write &01 to SCSI
@@ -261,7 +256,7 @@ CPU 1
        ORA &C317        ;; OR with current drive
        STA &C333
        JMP L814C        ;; Send rest of command block
-;; 
+;;
 .L814A LDA (&B0),Y      ;; Get a command block byte
 .L814C JSR L833E        ;; Send to SCSI data port
        JSR L8332        ;; Wait until SCSI busy
@@ -288,7 +283,7 @@ CPU 1
        ROL A            ;; A=0/1 for Read/Write
        JSR L8213        ;; Claim the Tube
        PLP              ;; Restore CC/CS state
-;; 
+;;
 ;; Do a data transfer to/from SCSI device
 ;; --------------------------------------
 .L817C JSR L8332        ;; Check SCSI status
@@ -296,28 +291,28 @@ CPU 1
        BIT &CD          ;; Check Tube/Direction flags
        BVS L819B        ;; Jump for Tube transfer
        BCS L818E        ;; Jump for I/O read
-;; 
+;;
 ;;                                         I/O write
        LDA (&B2),Y      ;; Get byte from memory
        STA &FC40        ;; Write to SCSI data port
        BRA L8193        ;; Jump to update address
-;; 
+;;
 .L818E LDA &FC40        ;; Read byte from SCSI data port
        STA (&B2),Y      ;; Store byte in memory
 .L8193 INY              ;; Point to next byte
        BNE L817C        ;; Loop for 256 bytes
        INC &B3          ;; Increment address high byte
        JMP L817C        ;; Loop for next 256 bytes
-;; 
+;;
 .L819B BCS L81A5        ;; Jump for Tube read
        LDA &FEE5        ;; Get byte from Tube
        STA &FC40        ;; Write byte to SCSI data port
        BRA L817C        ;; Loop for next byte
-;; 
+;;
 .L81A5 LDA &FC40        ;; Get byte from SCSI data port
        STA &FEE5        ;; Write to Tube
        BRA L817C        ;; Loop for next byte
-;; 
+;;
 .L81AD JSR L803A        ;; Release Tube and restore screen
 .L81B0 JSR L8332        ;; Wait for SCSI data ready
        LDA &FC40        ;; Get result byte
@@ -330,19 +325,19 @@ CPU 1
        LDX &FC40        ;; Get second result byte
        BEQ L81CA        ;; OK, jump to return result
        JMP L82A5        ;; Return result=&7F
-;; 
+;;
 .L81CA TAX              ;; Save result in X
        AND #&02         ;; Check b1
        BEQ L81D2        ;; If b1=0, return with &00
        JMP L825D        ;; Get status from SCSI and return it
-;; 
+;;
 .L81D2 LDA #&00         ;; A=0 - OK
 .L81D4 LDX &B0          ;; Restore XY pointer
        LDY &B1
        AND #&7F         ;; Lose bit 7
        RTS              ;; Return with result in A
-;; 
-;; 
+;;
+;;
 ;; &CD ADFS status flag
 ;; --------------------
 ;; b7 Tube present
@@ -353,8 +348,8 @@ CPU 1
 ;; b2 *OPT1 setting
 ;; b1 Bad Free Space Map
 ;; b0 Files being ensured
-;; 
-;; 
+;;
+;;
 ;; Not Read or Write
 ;; -----------------
 .L81DB LDY #&00
@@ -369,14 +364,14 @@ CPU 1
        BNE L81E8
        INC &B3
        BRA L81E1
-;; 
+;;
 .L81F4 LDA &FC40
        STA (&B2),Y
        INY
        BNE L81F4
        INC &B3
        BRA L81E1
-;; 
+;;
 .L8200 INC &C228
        BNE L820D
        INC &C229
@@ -385,20 +380,20 @@ CPU 1
 .L820D LDX #&27
        LDY #&C2
        RTS
-;; 
+;;
 .L8212 SEI
 .L8213 JSR &0406
        LDY #&00
        JSR L821B
 .L821B JSR L821E
 .L821E RTS
-;; 
+;;
 .L821F LDX #&27
        LDY #&C2
 .L8223 JSR L8332
        BPL L822B
        JMP L81AD
-;; 
+;;
 .L822B BVS L8245
        PHP
        LDA #&06
@@ -413,7 +408,7 @@ CPU 1
        JSR L8200
        PLP
        BRA L8223
-;; 
+;;
 .L8245 PHP
        LDA #&07
        JSR L8212
@@ -427,8 +422,8 @@ CPU 1
        JSR L8200
        PLP
        BRA L8223
-;; 
-;; 
+;;
+;;
 ;; Read result from SCSI and return it as a result
 ;; -----------------------------------------------
 .L825D JSR L807E        ;; Set SCSI to command mode
@@ -452,7 +447,7 @@ CPU 1
        ORA &C2D2        ;; ORA drive number with current drive
        STA &C2D2
        JSR L8332        ;; Wait for SCSI
-       LDX &C2D3        ;; Get returned error number 
+       LDX &C2D3        ;; Get returned error number
        LDA &FC40        ;; Get a byte from SCSI
        JSR L8332        ;; Wait for SCSI
        LDY &FC40        ;; Get another byte from SCSI
@@ -461,10 +456,10 @@ CPU 1
        BNE L82A5        ;; If set, jump to return &7F
        TXA
        JMP L81D4        ;; Return returned SCSI result
-;; 
+;;
 .L82A5 LDA #&FF         ;; Result=&FF
        JMP L81D4        ;; Jump to return result
-;; 
+;;
 ;; Do predefined SCSI operations
 ;; -----------------------------
 .L82AA LDX #&15         ;; Point to &C215
@@ -472,57 +467,59 @@ CPU 1
 .L82AE JSR L80A2        ;; Do a disk operation
        BNE L82BD        ;; Jump ahead with error
        RTS              ;; Exit if OK
-;; 
+;;
 ;; Do a disk access
 ;; ----------------
 .L82B4 LDA &C22F
        STA &C317
        JMP L8BE2
-;; 
+;;
 .L82BD CMP #&25         ;; Hard drive error &25 (Bad drive)?
        BEQ L82B4        ;; Jump to give 'Not found' error
        CMP #&65         ;; Floppy error &25 (Bad drive)
        BEQ L82B4        ;; Jump to give 'Not found' error
        CMP #&6F         ;; Floppy error &2F (Abort)?
        BNE L82DC        ;; If no, report a disk error
-;; 
+;;
 .L82C9 JSR L849A
 .L82CC LDA #&7E
        JSR &FFF4        ;; Acknowledge Escape state
        JSR L836B        ;; Generate an error
        EQUB &11         ;; ERR=17
        EQUS "Escape"    ;; REPORT="Escape"
-;;      70 65       pe
        EQUB &00
-;; 
+;;
 .L82DC CMP #&04         ;; Hard drive error &04 (Not ready)?
        BNE L82F4        ;; No, try other errors
        JSR L836B        ;; Generate an error "Drive not ready"
        EQUB &CD         ;; ERR=205
        EQUS "Drive not ready"
        EQUB &00
+;;
 .L82F4 CMP #&40         ;; Floppy drive error &10 (WRPROT)?
        BEQ L830B        ;; Jump to report "Disk protected"
-;;                                         All other results, give generic
-;;                                         error message
+                        ;; All other results, give generic
+                        ;; error message
        JSR L89D8
        TAX
        JSR L8374
        EQUB &C7         ;; ERR=199
        EQUS "Disc error"
        EQUB &00
+;;
 .L830B JSR L834E        ;; Generate an error
        EQUB &C9         ;; ERR=201
        EQUS "Disc protected"
        EQUB &00
+;;
 .L831E JSR L8324
        BNE L82BD
        RTS
-;; 
+;;
 .L8324 JSR L833E
        RTS
-;; 
-;; 
+;;
+;;
 ;; Wait until any ensuring completed
 ;; =================================
 .L8328 LDA #&01         ;; Looking at bit 0
@@ -532,7 +529,7 @@ CPU 1
        BIT &CD          ;; Check Ensure
        BNE L8328        ;; Loop back if set
        RTS
-;; 
+;;
 ;; Wait until SCSI ready to respond
 ;; --------------------------------
 .L8332 PHA              ;; Save A
@@ -542,17 +539,17 @@ CPU 1
        PLA              ;; Restore A
        BIT &CC
        RTS
-;; 
+;;
 .L833E JSR L8332        ;; Wait until SCSI ready
        BVS L8349
        STA &FC40
        LDA #&00
        RTS
-;; 
+;;
 .L8349 PLA
        PLA
        JMP L81AD
-;; 
+;;
 .L834E LDX &C22F
        INX
        BNE L836B
@@ -570,7 +567,7 @@ CPU 1
        LDA #&10
        TRB &CD
 .L8372 LDX #&00
-;; 
+;;
 .L8374 PLA
        STA &B2
        PLA
@@ -591,7 +588,7 @@ CPU 1
        BCS L839B
 .L8395 JSR L8451
        JMP L83A2
-;; 
+;;
 .L839B CMP #&3A
        BCS L8395
        JSR L846D
@@ -669,7 +666,7 @@ CPU 1
        JSR L84CB
        JSR L849A
 .L843D JMP &0100
-;; 
+;;
 .L8440 EQUS ": ta "
 .L8445 EQUS " lennahc no "
 .L8451 PHA
@@ -683,14 +680,14 @@ CPU 1
        INY
        STA &0100,Y
        RTS
-;; 
+;;
 .L8462 AND #&0F
        ORA #&30
        CMP #&3A
        BCC L846C
        ADC #&06
 .L846C RTS
-;; 
+;;
 .L846D BIT L8483
        LDX #&64
        JSR L847D
@@ -717,7 +714,7 @@ CPU 1
        STA &0100,Y
 .L8498 PLA
        RTS
-;; 
+;;
 .L849A LDX #&0C
        LDA #&FF
 .L849E STA &C22B,X
@@ -740,13 +737,13 @@ CPU 1
 ;;
 .L84C0 EQUS "SP."       ;; Abbreviation of 'Spool'
        EQUB &0D
-;; 
+;;
 ;; OSBYTE READ
 ;; -----------
 .L84C4 LDY #&FF
 .L84C6 LDX #&00
        JMP &FFF4        ;; Osbyte A,&00,&FF
-;; 
+;;
 ;; Close Spool or Exec if ADFS channel
 ;; -----------------------------------
 .L84CB CMP #&30         ;; Check against lowest ADFS handle
@@ -755,16 +752,16 @@ CPU 1
        BCS L84BC        ;; Exit if not ADFS
 .L84D3 LDY #>L84BD      ;; Point to *Spool or *Exec
        JMP &FFF7        ;; Jump to close via MOS
-;; 
+;;
 .L84D8 EQUS &0D, "SEY"
 .L84DC EQUS &00, "Hugo"
-;; 
+;;
 .L84E1 LDA &C237
        ORA &C238
        ORA &C239
        BNE L84ED
        RTS
-;; 
+;;
 .L84ED LDX #&00
 .L84EF CPX &C1FE
        BCS L8526
@@ -779,7 +776,7 @@ CPU 1
        BCS L8508
        LDX &B2
        BRA L84EF
-;; 
+;;
 .L8508 BNE L850D
        DEY
        BPL L84FB
@@ -799,7 +796,7 @@ CPU 1
        BEQ L8529
        PLP
 .L8526 JMP L85B3
-;; 
+;;
 .L8529 INX
        INY
        CPY #&03
@@ -819,7 +816,7 @@ CPU 1
        LDX &B2
        PLA
        BRA L8596
-;; 
+;;
 .L854A INX
        INY
        CPY #&03
@@ -861,7 +858,7 @@ CPU 1
        DEX
        STX &C1FE
        RTS
-;; 
+;;
 .L8596 LDY #&00
        CLC
        PHP
@@ -878,7 +875,7 @@ CPU 1
        BNE L859A
        PLP
        RTS
-;; 
+;;
 .L85B3 LDX &B2
        BEQ L85EB
        CLC
@@ -892,7 +889,7 @@ CPU 1
        BEQ L85CB
        PLP
        BRA L85EB
-;; 
+;;
 .L85CB INX
        INY
        CPY #&03
@@ -913,7 +910,7 @@ CPU 1
        BNE L85D8
        PLP
        RTS
-;; 
+;;
 .L85EB LDA &C1FE
        CMP #&F6
        BCC L85FF
@@ -921,7 +918,7 @@ CPU 1
        EQUB &99         ;; ERR=153
        EQUS "Map full"
        EQUB &00
-;; 
+;;
 .L85FF LDX &C1FE
 .L8602 CPX &B2
        BEQ L8615
@@ -931,7 +928,7 @@ CPU 1
        LDA &C100,X
        STA &C103,X
        BRA L8602
-;; 
+;;
 .L8615 LDY #&00
 .L8617 LDA &C234,Y
        STA &C000,X
@@ -945,7 +942,7 @@ CPU 1
        ADC #&02
        STA &C1FE
 .L8631 RTS
-;; 
+;;
 .L8632 LDX #&00
        STX &C25D
        STX &C25E
@@ -966,7 +963,7 @@ CPU 1
        BNE L8646
        PLP
        JMP L863D
-;; 
+;;
 .L865B LDX #&FF
        STX &B3
        INX
@@ -989,11 +986,12 @@ CPU 1
        EQUB &C6         ;; ERR=198
        EQUS "Disc full"
        EQUB &00
-;; 
+;;
 .L868D JSR L834E
        EQUB &98         ;; ERR=152
        EQUS "Compaction required"
        EQUB &00
+;;
 .L86A5 LDY #&02
 .L86A7 DEX
        LDA &C000,X
@@ -1029,7 +1027,7 @@ CPU 1
        BNE L86CE
        PLP
        RTS
-;; 
+;;
 .L86E1 LDY #&02
        INX
        INX
@@ -1062,7 +1060,7 @@ CPU 1
        SBC #&03
        STA &C1FE
        RTS
-;; 
+;;
 .L8723 LDX &B3
        INX
        BNE L872C
@@ -1070,12 +1068,12 @@ CPU 1
        STA &B3
 .L872C LDX &B2
        JMP L8660
-;; 
+;;
 .L8731 INC &B4
        BNE L8737
        INC &B5
 .L8737 RTS
-;; 
+;;
 .L8738 JSR LA50D
        JSR L8D79
        LDY #&00
@@ -1090,17 +1088,18 @@ CPU 1
        BCS L8755
 .L8753 LDX #&00
 .L8755 RTS
-;; 
+;;
 .L8756 LDY #&0A
 .L8758 JSR L8743
        BEQ L876D
        DEY
        BPL L8758
-;; 
+;;
 .L8760 JSR L836B
        EQUB &CC         ;; ERR=204
        EQUS "Bad name"
        EQUB &00
+;;
 .L876D LDY #&09
 .L876F LDA (&B6),Y
        AND #&7F
@@ -1132,7 +1131,7 @@ CPU 1
        INY
        BNE L877C
 .L87AA RTS
-;; 
+;;
 .L87AB JSR L8743
        BNE L8760
 .L87B0 JSR L8743
@@ -1144,7 +1143,7 @@ CPU 1
        BPL L87B0
        CMP #&FF
        RTS
-;; 
+;;
 .L87C1 CPY #&0A
        BEQ L87AA
        JSR L8743
@@ -1153,7 +1152,7 @@ CPU 1
        BEQ L87D1
 .L87CE CMP #&00
        RTS
-;; 
+;;
 .L87D1 INY
 .L87D2 LDA &C262,X
        AND #&7F
@@ -1171,13 +1170,13 @@ CPU 1
        BNE L87D2
 .L87EB CPX #&00
        RTS
-;; 
+;;
 .L87EE PLA
        PLA
 .L87F0 LDA #&00
        SEC
        RTS
-;; 
+;;
 .L87F4 CPY #&0A
        BCS L87F0
        LDA (&B4),Y
@@ -1207,7 +1206,7 @@ CPU 1
        BNE L8815
 .L882E CMP #&0F
 .L8830 RTS
-;; 
+;;
 ;; Control block to load FSM
 .L8831 EQUB &01
        EQUB &00
@@ -1220,7 +1219,7 @@ CPU 1
        EQUB &00
        EQUB &02
 .L883B EQUB &00
-;; 
+;;
 ;; Control block to load '$'
 .L883C EQUB &01
        EQUB &00
@@ -1233,7 +1232,7 @@ CPU 1
        EQUB &02
        EQUB &05
        EQUB &00
-;; 
+;;
 ;; Check drive character
 .L8847 CMP #&30
        BCC L886D        ;; <'0' - error
@@ -1259,9 +1258,9 @@ CPU 1
        ROR A
        ROR A
        RTS
-;; 
+;;
 .L886D JMP L8760
-;; 
+;;
 .L8870 JSR L8738
        BEQ L886D
 .L8875 JSR L8738
@@ -1329,7 +1328,7 @@ CPU 1
        CMP #&2E
        BNE L892F
        JMP L8997
-;; 
+;;
 .L8910 LDA #&24
        STA &C262
        LDA #&0D
@@ -1342,11 +1341,11 @@ CPU 1
        STA &C2C0
        LDA #&00
        RTS
-;; 
+;;
 .L892A JSR L880C
        BEQ L893F
 .L892F RTS
-;; 
+;;
 .L8930 LDX #&01
        LDY #&03
        LDA (&B6),Y
@@ -1355,7 +1354,7 @@ CPU 1
 .L8939 STX &C2C0
        LDA #&00
        RTS
-;; 
+;;
 .L893F LDY #&00
 .L8941 JSR L8743
        CMP #&21
@@ -1374,7 +1373,7 @@ CPU 1
        BEQ L8956
 .L8961 LDA #&FF
        RTS
-;; 
+;;
 .L8964 CLC
        LDA &B6
        ADC #&1A
@@ -1387,7 +1386,7 @@ CPU 1
        JSR L8756
        BNE L8964
        RTS
-;; 
+;;
 .L897B LDY #&09
        LDA (&B6),Y
        BPL L8997
@@ -1398,6 +1397,7 @@ CPU 1
        EQUB &B0         ;; ERR=176
        EQUS "Bad rename"
        EQUB &00
+;;
 .L8997 LDA &C2A2
        SEC
        ADC &B4
@@ -1427,9 +1427,9 @@ CPU 1
        BPL L89C3
        JSR L82AA
        JMP L88FD
-;; 
+;;
 .L89D5 LDA &C2C0
-;; 
+;;
 .L89D8 PHA
        LDA &C22F
        CMP #&FF
@@ -1475,16 +1475,16 @@ CPU 1
        LDY &B9
        PLA
 .L8A41 RTS
-;; 
+;;
 .L8A42 JSR L8A4A        ;; Do disk access
        BEQ L8A41        ;; No error, exit
        JMP L82BD        ;; Generate disk error
-;; 
-;; 
+;;
+;;
 ;; User Disk Access
 ;; ================
 ;; Do a disk access using SCSI protocol. Control block at &C215-&C224
-;; 
+;;
 ;;    Addr Ctrl
 ;;   &C215  Returned result
 ;;   &C216  Addr0
@@ -1501,16 +1501,16 @@ CPU 1
 ;;   &C221  Length1
 ;;   &C222  Length2
 ;;   &C223  Length3
-;;   &C224 
-;; 
+;;   &C224
+;;
 .L8A4A LDA &C21A        ;; Get command
        CMP #&08         ;; Read?
        BEQ L8A68        ;; Jump forward with Read
        LDA &C220        ;; If Length0=0?
        BEQ L8A68        ;; Whole number of sectors
-;; 
+;;
 ;; Adjust the Length to be a whole number of sectors for writing
-;; 
+;;
        LDA #&0
        STA &C220
        INC &C221
@@ -1518,20 +1518,20 @@ CPU 1
        INC &C222
        BNE L8A68
        INC &C223
-;; 
+;;
 ;; Length is now a whole number of sectors, a whole multiple of 256 bytes
-;; 
+;;
 .L8A68 LDX #&15
        LDY #&C2         ;; XY=>control block
        LDA #&FF
        STA &C21E        ;; Set initial sector count to &FF
-;; 
+;;
 ;; Transfer batches of &FF00 bytes until less than 64k left
 ;; --------------------------------------------------------
 .L8A71 LDA &C223
        ORA &C222        ;; Get Length2+Length3
        BEQ L8ABC        ;; Jump if remaining length<64k
-;; 
+;;
        JSR L80A2        ;; Do a transfer
        BNE L8ACE        ;; Exit with any error
        LDA #&FF         ;; Update address
@@ -1542,7 +1542,7 @@ CPU 1
        INC &C218        ;; Addr2=Addr2+1
        BNE L8A91        ;; No overflow
        INC &C219        ;; Addr3=Addr3+1
-;; 
+;;
 .L8A91 LDA #&FF         ;; Update sector
        CLC
        ADC &C21D        ;; Sector=Sector+&FF
@@ -1551,7 +1551,7 @@ CPU 1
        INC &C21C        ;; Sector1=Sector1+1
        BNE L8AA4        ;; No overflow
        INC &C21B        ;; Sector2=Sector2+1
-;; 
+;;
 .L8AA4 LDA &C221        ;; Update length
        SEC
        SBC #&FF         ;; Length=Length-&0000FF00
@@ -1562,7 +1562,7 @@ CPU 1
        DEC &C223        ;; Length3=Length3-1
 .L8AB7 DEC &C222        ;; Length2=Length2-1
        BRA L8A71        ;; Loop back for another &FF00 bytes
-;; 
+;;
 ;; There is now less than 64k to transfer
 ;; --------------------------------------
 .L8ABC LDA &C221        ;; Get Length1
@@ -1570,11 +1570,11 @@ CPU 1
        STA &C21E        ;; Set Sector Count
        JSR L80A2        ;; Do this transfer
        BNE L8ACE        ;; Exit with any error
-;; 
+;;
 .L8AC9 LDA &C220        ;; Get Length0
        BNE L8ACF        ;; Jump to deal with any leftover bytes
 .L8ACE RTS
-;; 
+;;
 ;; There are now less than 256 bytes left, must be reading
 ;; -------------------------------------------------------
 .L8ACF STA &C21E        ;; Store Length0 in Sector Count
@@ -1629,7 +1629,7 @@ CPU 1
        LSR A
        ADC #&C9
        JMP LBA4E
-;; 
+;;
 ;; Get bytes from a partial sector from a hard drive
 ;; -------------------------------------------------
 .L8B4F LDA &C333        ;; Get drive number
@@ -1681,9 +1681,9 @@ CPU 1
 .L8BB7 DEX              ;; Decrement byte count
 .L8BB8 INY              ;; Next byte to fetch
        BNE L8BA2        ;; Loop for all 256 bytes
-;; 
+;;
 .L8BBB JMP L81AD        ;; Jump to release and finish
-;; 
+;;
 .L8BBE JSR L8870
        BEQ L8BCA
        BNE L8BD2
@@ -1694,20 +1694,20 @@ CPU 1
        BMI L8BC5
 .L8BD0 LDA #&00
 .L8BD2 RTS
-;; 
+;;
 .L8BD3 LDY #&00
        LDA (&B4),Y
        CMP #&5E
        BNE L8BDE
 .L8BDB JMP L8760
-;; 
+;;
 .L8BDE CMP #&40
        BEQ L8BDB
 .L8BE2 JSR L836B
        EQUB &D6         ;; ERR=210
        EQUS "Not found"
        EQUB &00
-;; 
+;;
 ;; Search for object, give error if 'E' set
 ;; ========================================
 .L8BF0 JSR L8FE8        ;; Search for object
@@ -1766,9 +1766,9 @@ CPU 1
        JSR L8A42
 .L8C67 JSR L8C6D
        JMP L89D5
-;; 
+;;
 .L8C6D JSR L9501        ;; Print info if *OPT1 set
-;; 
+;;
 ;; Copy file info to control block
 ;; -------------------------------
 .L8C70 LDY #&15         ;; Top byte of length
@@ -1810,11 +1810,11 @@ CPU 1
        LDY #&0E
        STA (&B8),Y      ;; Store access byte in control block
        RTS
-;; 
+;;
 ;; OSFILE &05 - Read Info
 ;; ======================
 ;; &B8/9=>control block, &B4/5=>filename
-;; 
+;;
 .L8CB3 LDY #&00         ;; Copy filename address again
        LDA (&B8),Y
        STA &B4
@@ -1828,10 +1828,10 @@ CPU 1
        BPL L8CCE        ;; 'E' not set, jump
        LDA #&FF         ;; 'E' set, filetype &FF
        JMP L89D8        ;;                         STA &C2C0
-;; 
+;;
 .L8CCE JSR L8C70
 .L8CD1 JMP L89D5
-;; 
+;;
 .L8CD4 LDY #&00
        LDA (&B8),Y
        STA &B4
@@ -1844,7 +1844,7 @@ CPU 1
        JSR L9456
        BEQ L8D01
 .L8CEC RTS
-;; 
+;;
 .L8CED JSR L8CD4
        BEQ L8D1B
        BNE L8CF9
@@ -1855,7 +1855,7 @@ CPU 1
        CMP #&2E
        BNE L8D04
 .L8D01 JMP L8BD3
-;; 
+;;
 .L8D04 CMP #&21
        BCC L8D0F
        CMP #&22
@@ -1864,12 +1864,12 @@ CPU 1
        BNE L8CFB
 .L8D0F LDA #&11
        RTS
-;; 
+;;
 .L8D12 LDY #&03
        LDA (&B6),Y
        BPL L8D1B
        JMP L95AB
-;; 
+;;
 .L8D1B LDY #&02
        LDA (&B6),Y
        BPL L8D2C
@@ -1877,6 +1877,7 @@ CPU 1
        EQUB &C3         ;; ERR=195
        EQUS "Locked"
        EQUB &00
+;;
 .L8D2C LDX #&09
 .L8D2E LDA &C3AC,X
        BEQ L8D74
@@ -1901,18 +1902,19 @@ CPU 1
        EQUB &C2         ;; ERR=194
        EQUS "Can't - File open"
        EQUB &00
+;;
 .L8D74 DEX
        BPL L8D2E
        INX
        RTS
-;; 
+;;
 .L8D79 LDY #&00
        JSR L8743
        BNE L8D85
        CMP #&2E
        BEQ L8DE6
        RTS
-;; 
+;;
 .L8D85 CMP #&3A
        BNE L8D98
        INY
@@ -1938,7 +1940,7 @@ CPU 1
        BNE L8DE0
        INY
        BRA L8D9E
-;; 
+;;
 .L8DB6 JSR L8743
        BEQ L8DAF
        LDX #&05
@@ -1961,18 +1963,18 @@ CPU 1
        CPY #&FF
        BNE L8DCB
 .L8DE0 RTS
-;; 
+;;
 .L8DE1 JSR L8743
        BNE L8DE0
 .L8DE6 JMP L8760
-;; 
+;;
 .L8DE9 JSR L836B
        EQUB &Fd         ;; ERR=194
        EQUS "Wild cards"
        EQUB &00
-;; 
+;;
 .L8DF8 EQUS &7F, "^@:$&"
-;; 
+;;
 .L8DFE JSR L8CF4
 .L8E01 BNE L8E24
        LDX #&02
@@ -1993,14 +1995,14 @@ CPU 1
        DEX
        BPL L8E1A
        RTS
-;; 
+;;
 .L8E24 LDA &C8B1
        BEQ L8E36
        JSR L836B
        EQUB &B3         ;; ERR=179
        EQUS "Dir full"
        EQUB &00
-;; 
+;;
 .L8E36 LDA &B4
        STA &C227
        LDA &B5
@@ -2028,13 +2030,13 @@ CPU 1
        DEC &B5
 .L8E6A DEC &B4
        JMP L8E54
-;; 
+;;
 .L8E6F LDA &C227
        STA &B4
        LDA &C228
        STA &B5
        RTS
-;; 
+;;
 .L8E7A LDY #&09
 .L8E7C LDA (&B4),Y
        AND #&7F
@@ -2050,7 +2052,7 @@ CPU 1
        DEY
        BPL L8E7C
        RTS
-;; 
+;;
 .L8E96 LDY #&11
 .L8E98 LDA (&B8),Y
        STA &C215,Y
@@ -2101,7 +2103,7 @@ CPU 1
        STA &C8FA
        STA &C400
        JMP L8EC3
-;; 
+;;
 .L8EF8 PLA
        STA &B7
        PLA
@@ -2140,7 +2142,7 @@ CPU 1
        BPL L8F38
        BCC L8F48
        JMP L867F
-;; 
+;;
 .L8F48 LDY #&16
        LDA #&FF
        STA (&B6),Y
@@ -2149,7 +2151,7 @@ CPU 1
        INY
        STA (&B6),Y
        JMP L84E1
-;; 
+;;
 .L8F57 JSR L8DFE
        JSR L8E7A
 .L8F5D JSR L8E96
@@ -2169,15 +2171,15 @@ CPU 1
        DEX
        BPL L8F74
        RTS
-;; 
+;;
 .L8F7F JSR L8F57
        JSR L8A42
        JMP L8F8B
-;; 
+;;
 .L8F88 JSR L8F57
 .L8F8B JSR L8F91
        JMP L8C67
-;; 
+;;
 .L8F91 JSR LA714
        JSR L9012
        LDX #&0A
@@ -2211,7 +2213,7 @@ CPU 1
        TRB &CD          ;; Flag FSM loaded
        LDA #&00
        RTS
-;; 
+;;
 .L8FE8 JSR L8870
        PHP
        PHA              ;; Save registers
@@ -2219,7 +2221,7 @@ CPU 1
        PLA              ;; Restore registers
        PLP
 .L8FF2 RTS
-;; 
+;;
 ;; Check Free Space Map consistancy
 ;; ================================
 .L8FF3 JSR L9012        ;; Check for overlapping FSM entries
@@ -2232,13 +2234,13 @@ CPU 1
        EQUB &A9         ;; ERR=169
        EQUS "Bad FS map"
        EQUB &00
-;; 
+;;
 ;; Check Free Space Map doesn't have overlapping entries
 ;; -----------------------------------------------------
 .L9012 LDX &C1FE        ;; Get pointer to end of FSM
        BEQ L8FF2        ;; Pointer=0, disk completely full, exit
        LDA #&00         ;; Seed the sum with zero
-.L9019 ORA LBFFF,X      ;; Merge with high byte of final free space
+.L9019 ORA &BFFF,X      ;; Merge with high byte of final free space
        ORA &C0FF,X      ;; Merge with high byte of final length
        DEX
        BEQ L9003        ;; Give error if end pointer not *3
@@ -2282,13 +2284,13 @@ CPU 1
        CPX &C1FE        ;; Check against end of FSM
        BCC L9035        ;; Loop for all entries
        RTS
-;; 
+;;
 ;; Add up FSM
 ;; ----------
 .L9065 CLC              ;; Clear carry
        LDY #&FF         ;; Point to &xxFE
        TYA              ;; Initialise A with -1
-.L9069 ADC LBFFF,Y      ;; Add sector 0 bytes &FE to &00
+.L9069 ADC &BFFF,Y      ;; Add sector 0 bytes &FE to &00
        DEY
        BNE L9069        ;; Loop for all bytes
        TAX              ;; Save result in X
@@ -2299,7 +2301,7 @@ CPU 1
        DEY
        BNE L9073        ;; Loop for all bytes
        RTS
-;; 
+;;
 ;; Control block to save FSM
 .L907A EQUB &01
        EQUB &00
@@ -2312,7 +2314,7 @@ CPU 1
        EQUB &00
        EQUB &02
        EQUB &00
-;; 
+;;
 ;; OSFILE &01-&03 - Write Info
 ;; ===========================
 .L9085 STA &C223        ;; Save function
@@ -2320,7 +2322,7 @@ CPU 1
        BEQ L9090        ;; Jump if file found
        LDA #&00         ;; Return 'no file'
        RTS
-;; 
+;;
 ;; Write Info - file found
 ;; -----------------------
 ;; (&B6)=>file info, (&B8)=>control block
@@ -2361,7 +2363,7 @@ CPU 1
        LDX &C223
        DEX
        BNE L9104
-;; 
+;;
 .L90D8 LDY #&0E
        LDA (&B8),Y      ;; Get access byte
        STA &C22B
@@ -2373,9 +2375,9 @@ CPU 1
 .L90EB LSR &C22B        ;; Move 'L' bit down to b0
        LDY #&02         ;; Point to 'L' bit
        BPL L90F4
-;; 
+;;
 .L90F2 LDY #&00         ;; Point to 'R' bit
-;; 
+;;
 .L90F4 LDA (&B6),Y      ;; Get filename byte
        ASL A            ;; Drop access bit
        LSR &C22B        ;; Get supplied access bit
@@ -2387,14 +2389,14 @@ CPU 1
        BEQ L90EB        ;; 'L' bit, move source down one more bit
 .L9104 JSR L8F91        ;; RWL done, store catalogue entry
        JMP L8CCE
-;; 
+;;
 ;; OSFILE &04 - Write Attributes
 ;; =============================
 .L910A JSR L8BF0
        BEQ L90D8
        LDA #&00
        RTS
-;; 
+;;
        JSR LA50D
        LDA &B4
        STA &C240
@@ -2408,7 +2410,7 @@ CPU 1
        BEQ L9131
        LDA #&00
        JMP L89D8
-;; 
+;;
 .L9131 JSR L8D1B
        LDY #&03
        LDA (&B6),Y
@@ -2436,6 +2438,7 @@ CPU 1
        EQUB &B4         ;; ERR=180
        EQUS "Dir not empty"
        EQUB &00
+;;
 .L9177 LDY #&12
        LDX #&02
        LDA (&B6),Y
@@ -2471,6 +2474,7 @@ CPU 1
        EQUB &96         ;; ERR=150
        EQUS "Can't delete CSD"
        EQUB &00
+;;
 .L91CB LDA &C317
        CMP &C31B
        BNE L91F9
@@ -2484,7 +2488,7 @@ CPU 1
        EQUB &97         ;; ERR=151
        EQUS "Can't delete Library"
        EQUB &00
-;; 
+;;
 .L91F9 LDA &C317
        CMP &C31F
        BNE L921B
@@ -2519,8 +2523,8 @@ CPU 1
        JSR L84E1
        JSR L8F91
        JMP L89D5
-;; 
-;; 
+;;
+;;
 ;; OSFILE
 ;; ======
 ;; A=function, XY=>control block
@@ -2551,11 +2555,11 @@ CPU 1
        STA &B5          ;; &B4/5=>filename
        PLA              ;; Get function to A
 .L9270 RTS              ;; Jump to subroutine
-;; 
+;;
 ;; On dispatch, (&B8)=>control block, (&B4)=>filename, A=function, Y=1, X=corrupted
 ;; Subroutine should return A=filetype, XY=>control block
-;; 
-;; 
+;;
+;;
 ;; OSFILE Dispatch Block
 ;; =====================
 .L9271 EQUW L8C10-1 ; &FF - LOAD
@@ -2567,14 +2571,14 @@ CPU 1
        EQUW L8CB3-1 ; &05 - Read Info
        EQUW L9127-1 ; &06 - Delete
        EQUW L8F88-1 ; &07 - Create
-;; 
+;;
 .L9283 TAX
        LDA #>L9FB1
        STA &B7
        LDA L9E95,X
        STA &B6
        LDX #&0C
-;; 
+;;
 .L928F LDY #&00
 .L9291 LDA (&B6),Y
        AND #&7F
@@ -2585,12 +2589,12 @@ CPU 1
        DEX
        BNE L9291
        RTS
-;; 
+;;
 .L92A1 JSR LA036
        DEX
        BNE L92A1
        RTS
-;; 
+;;
 .L92A8 PLA
        STA &B6
        PLA
@@ -2612,7 +2616,7 @@ CPU 1
        PHA
        PHY
        RTS
-;; 
+;;
 .L92CB PHA
        TXA
        PHA
@@ -2631,7 +2635,7 @@ CPU 1
        TAX
        PLA
        RTS
-;; 
+;;
 ;; Print filename, access, cycle number
 ;; ====================================
 .L92E5 LDX #&0A
@@ -2645,14 +2649,14 @@ CPU 1
        LDA L931D,Y      ;; Get access character
        JSR LA03C        ;; Print it
        DEX              ;; Dec. padding needed
-;; 
+;;
 .L92FD DEY              ;; Step to next access bit
        BPL L92F1        ;; Loop until <0
 .L9300 DEX              ;; Dec. padding needed
        BMI L9309        ;; All done
        JSR LA036        ;; Print a space
        JMP L9300        ;; Loop to print padding
-;; 
+;;
 .L9309 LDA #&28
        JSR LA03C        ;; Print '('
        LDY #&19
@@ -2661,12 +2665,11 @@ CPU 1
        LDA #&29
        JSR LA03C        ;; Print ')'
        JMP LA036        ;; Finish with a space
-;; 
+;;
 ;; Access bits
 ;; ===========
-.L931D EOR (&57)
-       JMP &4544
-;; 
+.L931D EQUS "RWLDE"
+;;
 .L9322 PHA
        LSR A
        LSR A
@@ -2676,7 +2679,7 @@ CPU 1
        PLA
 .L932B JSR L8462
        JMP LA03C
-;; 
+;;
 .L9331 JSR LA714
        LDA #&D9
        STA &B6
@@ -2739,7 +2742,7 @@ CPU 1
        LDA #&C4
        STA &B7
        RTS
-;; 
+;;
 ;; FSC 5 - *CAT
 ;; ============
 .L93D5 JSR LA50D
@@ -2757,7 +2760,7 @@ CPU 1
        STA &C22B
        JSR LA03A
        JMP L93FF
-;; 
+;;
 .L93FC JSR LA036
 .L93FF CLC
        LDA &B6
@@ -2777,13 +2780,13 @@ CPU 1
        JSR LA03C
 .L9420 JSR LA03A
 .L9423 JMP L89D8
-;; 
+;;
 .L9426 EQUB <L942A, <L942E, <L9432, <L9436
 .L942A EQUS "Off "
 .L942E EQUS "Load"
 .L9432 EQUS "Run "
 .L9436 EQUS "Exec"
-;; 
+;;
 ;; FSC 9 - *EX
 ;; =============
 .L943A JSR L9478
@@ -2799,7 +2802,7 @@ CPU 1
        BCC L9440
        INC &B7
        BRA L9440
-;; 
+;;
 .L9456 LDY #&00
        LDA (&B4),Y
        AND #&7F
@@ -2818,7 +2821,7 @@ CPU 1
        STA &B7
 .L9476 TYA
 .L9477 RTS
-;; 
+;;
 .L9478 LDY #&00
        LDA (&B4),Y
        CMP #&21
@@ -2834,7 +2837,7 @@ CPU 1
        JSR L8964
        BEQ L948B
 .L9496 JMP L8BE2
-;; 
+;;
 .L9499 JSR L9456
        BNE L9496
 .L949E LDY &C22E
@@ -2862,7 +2865,7 @@ CPU 1
        CMP #&94
        BEQ L9507
        JMP L82AA
-;; 
+;;
 ;; Fake entry for '$'
 ;; ==================
 .L94D3 EQUB &A4
@@ -2892,23 +2895,23 @@ CPU 1
        EQUB &00
        EQUB &00
        EQUB &00
-;; 
+;;
 ;; FSC 10 - *INFO
 ;; ==============
 .L94EE JSR L8FE8        ;; Search for object
        BEQ L94F6
        JMP L8BD3        ;; Error 'File not found' or 'Bad name'
-;; 
+;;
 .L94F6 JSR L9508        ;; Call ...
        JSR L8964
        BEQ L94F6
        JMP L89D8
-;; 
+;;
 .L9501 LDA &CD
        AND #&04
        BNE L9508
 .L9507 RTS
-;; 
+;;
 .L9508 JSR L92E5        ;; Print filename
        JSR LA03C        ;; Print another space
        LDY #&04
@@ -2922,7 +2925,7 @@ CPU 1
        BCC L9522        ;; Jump if file                    BRA L9522
        LDX #&17         ;; X=23, Y=24 if directory
        LDY #&18         ;; Just print sector start
-;; 
+;;
 .L9522 CPX #&16
        BEQ L952B
        LDA (&B6),Y
@@ -2942,7 +2945,7 @@ CPU 1
        CPX #&1A
        BNE L9522
 .L9543 JMP LA03A        ;; Print newline
-;; 
+;;
 .L9546 JSR L9486
        LDY #&09
 .L954B LDA &C8CC,Y
@@ -2963,7 +2966,7 @@ CPU 1
        STA &C22E
        STA &C22F
        JMP L89D8
-;; 
+;;
 .L9577 LDA #&FF
        LDY #&00
        JSR LA97A
@@ -2990,6 +2993,7 @@ CPU 1
        EQUB &C4         ;; ERR=196
        EQUS "Already exists"
        EQUB &00
+;;
 .L95BE LDA (&B4),Y
        AND #&7F
        CMP #&22
@@ -3048,7 +3052,7 @@ CPU 1
        STA &CDD9,X
        JSR L8A42
        JMP L8F8B
-;; 
+;;
 .L9639 EQUB &00
        EQUB &00
        EQUB &00
@@ -3065,7 +3069,7 @@ CPU 1
        EQUB &CE
        EQUB &FF
        EQUB &FF
-;; 
+;;
 .L9649 LDA &C22F
        CMP &C317
        BEQ L9654
@@ -3120,7 +3124,7 @@ CPU 1
        ORA &C2A5
        BNE L96C4
        RTS
-;; 
+;;
 .L96C4 LDA &C2A7
        ORA &C2A6
        BNE L96D4
@@ -3192,12 +3196,12 @@ CPU 1
        BNE L9780
        INC &C2AA
 .L9780 JMP L96EC
-;; 
+;;
 .L9783 LDA &CD
        AND #&08
        BEQ L978A
        RTS
-;; 
+;;
 .L978A LDA #&C4
        STA &C217
        LDA #&08
@@ -3211,7 +3215,7 @@ CPU 1
        LDA #&05
        STA &C21E
        JMP L82AE
-;; 
+;;
 .L97AE LDA #&00
        STA &C2AB
        STA &C2AC
@@ -3230,7 +3234,7 @@ CPU 1
        INC A
        BNE L981E
        JMP L8F91
-;; 
+;;
 .L97DC LDY #&16
        LDX #&02
        SEC
@@ -3281,7 +3285,7 @@ CPU 1
 .L9835 CPX &C1FE
        BCC L983D
        JMP L97B9
-;; 
+;;
 .L983D INX
        INX
        INX
@@ -3293,7 +3297,7 @@ CPU 1
        BCS L9851
        LDX &B2
        BRA L9835
-;; 
+;;
 .L9851 BNE L9856
        DEY
        BPL L9844
@@ -3311,7 +3315,7 @@ CPU 1
        BEQ L9871
        PLP
 .L986E JMP L97B9
-;; 
+;;
 .L9871 INX
        INY
        CPY #&03
@@ -3343,7 +3347,7 @@ CPU 1
        BPL L98A1
        JSR L9649
        JMP L97AE
-;; 
+;;
 .L98B3 LDA #&00
        STA &C0
        STA &C253
@@ -3409,18 +3413,18 @@ CPU 1
        BCC L98E2
        INC &B7
        BRA L98E2
-;; 
+;;
 .L993D JMP L89D8
-;; 
+;;
 .L9940 EQUS "^"
 .L9941 EQUB 13
-;; 
+;;
 ;; *ACCESS
 ;; =======
 .L9942 JSR L8FE8        ;; Search for object
        BEQ L9956        ;; Jump forward if found
        JMP L8BD3        ;; Jump to 'Not found'/'Bad name'
-;; 
+;;
 .L994A LDY #&02         ;; Clear existing LWR bits
 .L994C LDA (&B6),Y
        AND #&7F
@@ -3428,7 +3432,7 @@ CPU 1
        DEY
        BPL L994C
        RTS
-;; 
+;;
 .L9956 JSR L994A        ;; Clear existing LWR bits
        LDY #&04
        LDA (&B6),Y      ;; Get existing 'E' bit
@@ -3439,7 +3443,7 @@ CPU 1
        LDY #&00
        ORA (&B6),Y      ;; Copy 'D' bit into 'R' bit
        STA (&B6),Y      ;; Forces dirs to always have 'R'
-;; 
+;;
 .L996A STA &C22B        ;; Store 'E' or 'D'+'R' bit
        LDY #&00         ;; Step past filename
 .L996F LDA (&B4),Y
@@ -3458,7 +3462,7 @@ CPU 1
        BNE L998D
 .L998A INY
        BNE L997E
-;; 
+;;
 .L998D LDA (&B4),Y      ;; Get access character
        AND #&DF         ;; Force to upper case
        BIT &C22B        ;; Check 'E'/'D' flag
@@ -3472,7 +3476,7 @@ CPU 1
        STA (&B6),Y      ;; Set 'E' bit
        STA &C22B        ;; Set 'E'/'D' flag
        BMI L99BD
-;; 
+;;
 .L99AA LDX #&02         ;; Check if access character
 .L99AC CMP L931D,X
        BEQ L99CE        ;; Matching character
@@ -3489,7 +3493,7 @@ CPU 1
        BEQ L9956
        JSR L8F91
        JMP L89D8
-;; 
+;;
 .L99CE PHY
        TXA
        TAY
@@ -3498,12 +3502,13 @@ CPU 1
        STA (&B6),Y
        PLY
        BRA L99BD
-;; 
+;;
 .L99DA JSR LA03A
        JSR L836B
        EQUB &92         ;; ERR=146
        EQUS "Aborted"
        EQUB &00
+;;
 .L99E9 LDA &B4
        PHA
        LDA &B5
@@ -3538,7 +3543,7 @@ CPU 1
        BIT &FF
        BPL L9A36
        JMP L82CC
-;; 
+;;
 .L9A36 JSR L8FE8
        BNE L9A47
        JSR L9131
@@ -3547,34 +3552,47 @@ CPU 1
        PLA
        STA &B4
        JMP L9A29
-;; 
+;;
 .L9A47 PLA
        PLA
        JMP L89D8
-;; 
+;;
 .L9A4C JMP (&021E)
-;; 
-;; 
+;;
+;;
 ;; Default context
 ;; ===============
-.L9A4F BIT &20          ;; csd="$"
-       JSR &2020
-       JSR &2020
-       JSR &2420        ;; lib="$"
-       JSR &2020
-       JSR &2020
-       JSR &2020
+.L9A4F EQUS &24         ;; csd="$"
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUS &24         ;; lib="$"
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
+       EQUB &20
        EQUB &02         ;; csd=2
-       BRK
-       BRK
-       BRK
+       EQUB &00
+       EQUB &00
+       EQUB &00
        EQUB &02         ;; lib=2
-.L9A68 BRK
-       BRK
-       BRK
+.L9A68 EQUB &00
+       EQUB &00
+       EQUB &00
        EQUB &02         ;; back=2
-;; 
-;; 
+;;
+;;
 ;; Check if hard drive hardware present
 ;; ====================================
 ;; On entry: none
@@ -3582,7 +3600,7 @@ CPU 1
 ;;           NE  - no hard drive present
 ;;           X,Y - preserved
 ;;           A   - corrupted
-;; 
+;;
 .L9A6C LDA #&5A
        JSR L9A75
        BNE L9A7E
@@ -3591,14 +3609,14 @@ CPU 1
        STZ &FC43
        CMP &FC40
 .L9A7E RTS
-;; 
-;; 
+;;
+;;
 .L9A7F LDA #&A1         ;; Read CMOS
        LDX #&0B         ;; Location 11 - ADFS settings
        JSR &FFF4        ;; Read CMOS byte
        TYA              ;; Transfer CMOS byte to A
        RTS
-;; 
+;;
 ;; ADFS CMOS byte
 ;; --------------
 ;; b7    Floppy/Hard
@@ -3607,19 +3625,19 @@ CPU 1
 ;; b4    (NoCaps)
 ;; b3    (ShCaps)
 ;; b2-b0 FDrive
-;; 
-;; 
+;;
+;;
 .L9A88 LDA #&FD
        JSR L84C4        ;; Read BREAK type
        TXA
        RTS
-;; 
+;;
 ;; Boot command offset bytes
 ;; -------------------------
 .L9A8F EQUB <L9A92      ;; Option 1 at L9A92
        EQUB <L9A94      ;; Option 2 at L9A94
        EQUB <L9A9C      ;; Option 3 at L9A9C
-;; 
+;;
 ;; Boot commands
 ;; -------------
 .L9A92 EQUS "L."        ;; Start of *Load option
@@ -3630,16 +3648,16 @@ CPU 1
 .L9A9C EQUS "E.-ADFS-$.!BOOT"
                         ;; *Exec option
        EQUB &0D
-;; 
-;; 
+;;
+;;
 ;; SERVICE CALL HANDLERS
 ;; =====================
-;; 
+;;
 ;; The following tables hold addresses pushed onto the stack to call
 ;; service routines. Consequently, they are one byte less than the
 ;; actual routine addresses as the RTS opcode increments the address
 ;; popped from the stack
-;; 
+;;
 ;; Low service call routines address-1 low bytes
 ;; ---------------------------------------------
 .L9AAC EQUB <(L9AD5-1)                   ;; Serv0 - L9AD5 - Null
@@ -3652,7 +3670,7 @@ CPU 1
        EQUB <(L9AD5-1)                   ;; Serv7 - L9AD5 - Null
        EQUB <(L9D5E-1)                   ;; Serv8 - L9D5E - Osword
        EQUB <(L9E0D-1)                   ;; Serv9 - L9E0D - Help
-;; 
+;;
 ;; Low service call routines address-1 high bytes
 ;; ----------------------------------------------
 .L9AB6 EQUB >(L9AD5-1)
@@ -3665,7 +3683,7 @@ CPU 1
        EQUB >(L9AD5-1)
        EQUB >(L9D5E-1)
        EQUB >(L9E0D-1)
-;; 
+;;
 ;; High service call routines address-1 low bytes
 ;; ----------------------------------------------
 .L9AC0 EQUB <(L9CD9-1)                   ;; Serv21 - L9CD9 - High abs
@@ -3675,7 +3693,7 @@ CPU 1
        EQUB <(L9CEA-1)                   ;; Serv25 - L9CEA - FS Info
        EQUB <(L9D05-1)                   ;; Serv26 - L9D05 - *SHUT
        EQUB <(L9AD5-1)                   ;; Serv27 - L9AD5 - Null
-;; 
+;;
 ;; High service call routines address-1 high bytes
 ;; -----------------------------------------------
 .L9AC7 EQUB >(L9CD9-1)
@@ -3685,23 +3703,23 @@ CPU 1
        EQUB >(L9CEA-1)
        EQUB >(L9D05-1)
        EQUB >(L9AD5-1)
-;; 
+;;
 ;; SERVICE CALL HANDLER
 ;; ====================
-;; 
+;;
 .L9ACE BIT &0DF0,X      ;; Check ROM w/s byte
        BPL L9AD6        ;; &00-&7F -> Check bit6
        BVS L9AD8        ;; &C0-&FF -> ROM enabled
-;; 
+;;
 ;; Service quit - jump here with calls not used
 ;; --------------------------------------------
 .L9AD5 RTS              ;; &80-&BF -> ROM disabled
 .L9AD6 BVS L9AD5        ;; &40-&7F -> ROM disabled
-;; 
+;;
 ;; Workspace is allowed to be at &00xx-&3Fxx or &C0xx-&FFxx. If the
 ;; ROM workspace byte is set to %01xxxxxx or %10xxxxxx, implying
 ;; workspace somewhere in &40xx-&BFxx, then the ROM is disabled.
-;; 
+;;
 .L9AD8 CMP #&12         ;; Select filing system?
        BEQ L9B4C        ;; Jump to check FS
        CMP #&0A         ;; Service call 10 or higher?
@@ -3714,7 +3732,7 @@ CPU 1
        TXA              ;; Pass service number back into A
        LDX &F4          ;; Get ROM number back into X
        RTS              ;; Jump to service routine
-;; 
+;;
 ;; Service calls &21 to &27
 ;; ------------------------
 .L9AED CMP #&21         ;; Check against the lowest value
@@ -3726,23 +3744,23 @@ CPU 1
        PHA              ;; Push service routine address
        LDA L9AC0-&21,X   ;; onto stack
        BRA L9AE8        ;; Jump back to jump to service routine
-;; 
-;; 
+;;
+;;
 ;; Serv2 - Low workspace claim
 ;; ===========================
 ;; If insufficient workspace was available in high memory, ADFS claims
 ;; a page of workspace from low memory. ADFS also does some initialisation
 ;; on this call.
-;; 
+;;
 .L9AFF LDA &0DF0,X      ;; Get workspace pointer
        CMP #&DC         ;; Is it set to <&DC00?
        BCC L9B0A        ;; Use existing value if it is
        TYA
        STA &0DF0,X      ;; Use low workspace
 .L9B0A PHY              ;; Save current pointer
-;; 
+;;
 ;; Now do some initialisation. Look for a hard drive?
-;; 
+;;
        JSR L9A88        ;; Read BREAK type
        BEQ L9B3B        ;; Soft BREAK, jump ahead
        JSR LA744        ;; Find workspace
@@ -3765,9 +3783,9 @@ CPU 1
        LDY #&1F
        STA (&BA),Y      ;; Set w/s byte &1F
 .L9B38 JSR LA761        ;; Set workspace checksum
-;; 
+;;
 .L9B3B JSR LA767        ;; Check workspace checksum
-;; 
+;;
        PLY              ;; Get pointer back
        LDX &F4          ;; Get ROM number back into X
        BIT &0DF0,X      ;; Check w/s pointer
@@ -3775,13 +3793,13 @@ CPU 1
        INY              ;; Claim one page of low workspace
 .L9B47 LDA #&02         ;; Restore A to &02
 .L9B49 RTS
-;; 
-;; 
+;;
+;;
 ;; Select ADFS
 ;; ===========
 .L9B4A LDY #&08         ;; Y=8 to select ADFS
-;; 
-;; 
+;;
+;;
 ;; Serv12 - Select filing system
 ;; =============================
 .L9B4C CPY #&08
@@ -3789,8 +3807,8 @@ CPU 1
        PHY
        PHY
        BRA L9B94
-;; 
-;; 
+;;
+;;
 ;; Serv3 - Boot filing system
 ;; ==========================
 .L9B54 TYA
@@ -3811,16 +3829,16 @@ CPU 1
        LDX &F4          ;; Restore ROM number
        LDA #&03         ;; Restore A=FSBoot
        RTS              ;; Return unclaimed
-;; 
+;;
 .L9B72 PLA              ;; Replace boot flag with 'F'-Break
        PHX              ;; ...flag to prevent booting
 .L9B74 CLI              ;; Enable IRQs
        PHX              ;; Save keycode
-;; 
+;;
 ;; Stack now holds:
 ;;   top-1: Key pressed, &FF=none, &41='A', &43='F', &79='->'
 ;;   top-2: Boot flag, &00=boot, <>&00=no boot
-;; 
+;;
        JSR L9A7F        ;; Read CMOS settings
        ASL A            ;; Move NoDir/Dir into bit7
        BPL L9B85        ;; Jump forward with NoDir
@@ -3831,14 +3849,14 @@ CPU 1
        PHA
 .L9B85 JSR L92A8        ;; Print FS banner
        EQUS "Acorn ADFS", &0D, &8D
-;; 
+;;
 ;; Select ADFS
 ;; ===========
 ;; Stack now holds:
 ;;   top-1: Key pressed, &FF=none or *adfs, &41='A', &43='F' or *fadfs or
 ;;                       Serv08+Dir+Hard/PowerBreak, &79='->', &00/&08=Serv12
 ;;   top-2: Boot flag, &00=boot, <>&00=no boot
-;; 
+;;
 .L9B94 LDA #&06
        JSR L9A4C        ;; Tell current FS new FS taking over
        LDA #&10
@@ -3965,10 +3983,10 @@ CPU 1
        PLY              ;; Rebalance stack
        LDA #&00         ;; Claim the call
        RTS
-;; 
+;;
 .L9CAE EQUS ":0.LIB*", &0D
-;; 
-;; 
+;;
+;;
 ;; Vector Table
 ;; ============
 .L9CB6 EQUW &FF1B
@@ -3978,7 +3996,7 @@ CPU 1
        EQUW &FF27
        EQUW &FF2A
        EQUW &FF2D
-;; 
+;;
 ;; Extended Vector Table
 ;; =====================
 .L9CC4 EQUW L9247:EQUB &FF    ;; OSFILE
@@ -3988,15 +4006,15 @@ CPU 1
        EQUW LB5CB:EQUB &FF    ;; OSGBPB
        EQUW LB213:EQUB &FF    ;; OSFIND
        EQUW L9E9D:EQUB &FF    ;; FSCV
-;; 
-;; 
+;;
+;;
 ;; Serv21 - Claim High Absolute Workspace
 ;; ======================================
 .L9CD9 CPY #&CE         ;; ADFS needs up to &CE00-1
        BCS L9CDF        ;; Exit if Y>&CE
        LDY #&CE         ;; ADFS needs up to &CE00-1
 .L9CDF RTS
-;; 
+;;
 ;; Serv22 - Claim High Private Workspace
 ;; =====================================
 .L9CE0 TYA              ;; Pass w/s pointer to A
@@ -4004,12 +4022,12 @@ CPU 1
        LDA #&22         ;; Restore A to &22
        INY              ;; ADFS needs one page
        RTS
-;; 
+;;
 ;; Serv24 - State how much high workspace needed
 ;; =============================================
 .L9CE8 DEY              ;; ADFS needs one page
        RTS
-;; 
+;;
 ;; Serv25 - Return filing system information
 ;; =========================================
 .L9CEA LDX #&0A
@@ -4021,7 +4039,7 @@ CPU 1
        LDA #&25         ;; Restore A to &25
 .L9CF7 LDX &F4          ;; Get ROM number back to X
        RTS
-;; 
+;;
 ;; Filing system information
 ;; -------------------------
 .L9CFA EQUB &08         ;; Filing system number
@@ -4029,7 +4047,7 @@ CPU 1
        EQUB &30         ;; Lowest handle used
        EQUS "    "
 .L9D01 EQUS "sfda"      ;; "adfs" filing system name
-;; 
+;;
 ;; Serv26 - *SHUT
 ;; ==============
 .L9D05 PHY
@@ -4048,7 +4066,7 @@ CPU 1
 .L9D1E PLY
        LDA #&26
        BRA L9CF7
-;; 
+;;
 ;; Serv04 - *Commands
 ;; ==================
 .L9D23 PHY              ;; Save command pointer
@@ -4082,7 +4100,7 @@ CPU 1
        PHX              ;; Add extra byte to stack
        PHX              ;; Save adfs/fadfs flag
        JMP L9B94        ;; Jump to select FS 8
-;; 
+;;
 ;; Not *fadfs/*adfs or command has extra characters after it
 ;; ---------------------------------------------------------
 .L9D57 PLA              ;; Drop fadfs/adfs flag
@@ -4090,8 +4108,8 @@ CPU 1
        LDA #&04         ;; Restore A to '*Command'
        LDX &F4          ;; Restore ROM number
        RTS              ;; Exit
-;; 
-;; 
+;;
+;;
 ;; Serv8 - OSWORD calls
 ;; ====================
 .L9D5E PHY              ;; Save Y
@@ -4100,12 +4118,12 @@ CPU 1
        BCC L9DBA        ;; If <&70, exit unclaimed
        CMP #&74
        BCS L9DBA        ;; If >&73, exit unclaimed
-;; 
+;;
 ;; The following code is VERY annoying, as it means that if you call the
 ;; sector access calls with another filing system selected, ADFS selects
 ;; itself as the current filing system, thereby trampling all over any
 ;; memory you may be using.
-;; 
+;;
        LDA #&00
        TAY
        JSR &FFDA        ;; Get current filing system
@@ -4115,8 +4133,8 @@ CPU 1
 .L9D76 LDA &EF          ;; Get OSWORD number
        CMP #&72         ;; Is if &72?
        BNE L9DC0        ;; No, jump ahead
-;; 
-;; 
+;;
+;;
 ;; OSWORD &72 - SCSI Device Access (Sector Read/Write)
 ;; ===================================================
        LDA &F0          ;; Copy block pointer to &BA/B
@@ -4128,7 +4146,7 @@ CPU 1
        STA &C215,Y
        DEY
        BPL L9D86
-;; 
+;;
 ;; The control block is copied to ADFS filing system workspace:
 ;;    Addr Ctrl
 ;;   &C215  0  Returned result
@@ -4147,12 +4165,12 @@ CPU 1
 ;;   &C222 13  Length2
 ;;   &C223 14  Length3
 ;;   &C224 15
-;; 
+;;
        LDA &C21A        ;; Get command
        AND #&FD         ;; Mask out bit 1
        CMP #&08         ;; Is it &08 or &0A, Read or Write?
        BEQ L9DA8        ;; Jump forward with Read and Write
-;; 
+;;
 .L9D97 LDX #&15
        LDY #&C2
        INC &C317
@@ -4160,11 +4178,11 @@ CPU 1
        DEC &C317
 .L9DA3 JSR L80A2
        BPL L9DB0        ;; Jump to exit
-;; 
+;;
 .L9DA8 LDA &C21E        ;; Get Sector Count
        BNE L9D97        ;; If not zero jump back to use it
        JSR L8A4A        ;; Do the SCSI call
-;; 
+;;
 ;; Store result value and claim call
 ;; ---------------------------------
 .L9DB0 LDY #&00         ;; Point to result byte
@@ -4173,15 +4191,15 @@ CPU 1
        PLY              ;; Restore Y
        LDA #&00         ;; A=0 to claim OSWORD
        RTS
-;; 
+;;
 ;; Exit from OSWORD service call
 ;; -----------------------------
 .L9DBA LDX &F4          ;; Put ROM number in X
        PLY              ;; Restore Y
        LDA #&08         ;; A=8 to exit with OSWORD unclaimed
        RTS
-;; 
-;; 
+;;
+;;
 .L9DC0 CMP #&73
        BNE L9DD0
        LDY #&04
@@ -4199,7 +4217,7 @@ CPU 1
        INY
        STA (&F0),Y
        JMP L9DB4
-;; 
+;;
 .L9DE3 CMP #&71
        BNE L9DBA
        JSR LA1EA
@@ -4209,7 +4227,7 @@ CPU 1
        DEY
        BPL L9DEC
        BRA L9DB4
-;; 
+;;
 .L9DF6 JSR L92A8
        EQUS &0D, "Advanced DFS 1.50", &8D
        RTS
@@ -4226,7 +4244,7 @@ CPU 1
        LDX &F4
        LDA #&09
 .L9E28 RTS
-;; 
+;;
 .L9E29 INY
        LDA (&F2),Y
        CMP #&20
@@ -4284,7 +4302,7 @@ CPU 1
        INX
        INX
        BRA L9E5C
-;; 
+;;
 .L9E95 EQUB <L9FFB
        EQUB <L9FB1
        EQUB <L9FBD
@@ -4293,8 +4311,8 @@ CPU 1
        EQUB <L9FDD
        EQUB <L9FE7
        EQUB <L9FF4
-;; 
-;; 
+;;
+;;
 ;; FSC - Filing System Control
 ;; ===========================
 .L9E9D STX &B4          ;; Store X and Y in &B4/5
@@ -4312,7 +4330,7 @@ CPU 1
        LDX &B4          ;; Retrieve X and Y
        LDY &B5
 .L9EBA RTS              ;; Jump to routine
-;; 
+;;
 ;; FSC Routine Low Bytes
 ;; ---------------------
 .L9EBB EQUB <(LA001-1)    ;;  *OPT
@@ -4327,7 +4345,7 @@ CPU 1
        EQUB <(L943A-1)    ;;  *EX
        EQUB <(L94EE-1)    ;;  *INFO
        EQUB <(LA3DB-1)    ;;  *RUN from library
-;; 
+;;
 ;; FSC Routine High Bytes
 ;; ----------------------
 .L9EC7 EQUB >(LA001-1)
@@ -4342,7 +4360,7 @@ CPU 1
        EQUB >(L943A-1)
        EQUB >(L94EE-1)
        EQUB >(LA3DB-1)
-;; 
+;;
 ;; FSC 3 - *command
 ;; ================
 .L9ED3 JSR L8328
@@ -4393,7 +4411,7 @@ CPU 1
        LDA L9F2D+1,X
        PHA
        RTS              ;; Jump indirectly to routine
-;; 
+;;
 .L9F2D EQUS "ACCESS", >(L9942-1), <(L9942-1), &16
        EQUS "BACK", >(LA4D5-1), <(LA4D5-1), &00
        EQUS "BYE", >(LA103-1), <(LA103-1), &00
@@ -4412,7 +4430,7 @@ CPU 1
        EQUS "RENAME", >(LA541-1), <(LA541-1), &22
        EQUS "TITLE", >(LA292-1), <(LA292-1), &70
        EQUS >(LA3DB-1), <(LA3DB-1)
-;; 
+;;
 .L9FB1 EQUS "<List Spec>"
        EQUB &00
 .L9FBD EQUS "<Ob Spec>"
@@ -4427,13 +4445,13 @@ CPU 1
        EQUB &00
 .L9FF4 EQUS "<Title>"
 .L9FFB EQUB &00
-;; 
+;;
 ;; FSC 7 - Handle Request
 ;; ======================
 .L9FFC LDX #&30         ;; Lowest handle=&30
        LDY #&39         ;; Highest handle=&39
        RTS
-;; 
+;;
 ;; FSC 0 - *OPT
 ;; ============
 .LA001 LDX &B4
@@ -4447,7 +4465,7 @@ CPU 1
 .LA00F LDA #&04
        TRB &CD
 .LA013 JMP L89D8
-;; 
+;;
 .LA016 CPX #&03
        BNE LA02A
        JSR L8FF3
@@ -4456,14 +4474,15 @@ CPU 1
        AND #&03
        STA &C1FD
        JMP L8F91
-;; 
+;;
 .LA02A JSR L836B
        EQUB &CB         ;; ERR=203
        EQUS "Bad opt"
        EQUB &00
+;;
 .LA036 LDA #&20
        BRA LA03C
-;; 
+;;
 .LA03A LDA #&0D
 .LA03C PHX
        PHY
@@ -4487,7 +4506,7 @@ CPU 1
        PLY
        PLX
        RTS
-;; 
+;;
 .LA063 JSR LA1EA
        JSR LA206
        JSR L92A8
@@ -4533,7 +4552,7 @@ CPU 1
        JSR LA03A
        LDX &C6
        BRA LA0A9
-;; 
+;;
 ;; FSC 8 - OSCLI being processed
 ;; =============================
 .LA0DC LDX &C2D9
@@ -4544,8 +4563,8 @@ CPU 1
        JSR L92A8        ;; Print message
        EQUB "Compaction recommended", &8D
        RTS
-;; 
-;; 
+;;
+;;
 ;; *BYE
 ;; ====
 .LA103 LDA &C317        ;; Get current drive
@@ -4567,7 +4586,7 @@ CPU 1
        PLA
        STA &C317        ;; Restore current drive
        RTS
-;; 
+;;
 .LA12A EQUB &00
        EQUB &00         ;; ;; &FFFFC900
        EQUB &C9
@@ -4579,7 +4598,7 @@ CPU 1
        EQUB &00
        EQUB &00         ;; ;; Zero sector
        EQUB &00
-;; 
+;;
 .LA135 JSR LA50D
        LDY &C317
        INY
@@ -4593,7 +4612,7 @@ CPU 1
        JSR L8847
        STA &C26F        ;; Set drive number
 .LA150 RTS
-;; 
+;;
 .LA151 JSR LA135
        LDX #&09
 .LA156 LDA &C3AC,X
@@ -4619,7 +4638,7 @@ CPU 1
        LDX #&00
        JSR LA189
        BRA LA1B9
-;; 
+;;
 .LA189 LDY #&09
 .LA18B LDA LA196-2,Y
        STA &C300,X
@@ -4627,9 +4646,9 @@ CPU 1
        DEY
        BPL LA18B
        RTS
-;; 
+;;
 .LA196 EQUS &0D, &22, "tesnU", &22
-;; 
+;;
 ;; *MOUNT
 ;; ======
 .LA19E JSR LA135        ;; Scan drive number parameter
@@ -4658,7 +4677,7 @@ CPU 1
        LDX #&0A
        JSR LA189        ;; Set library name to "Unset"
 .LA1DE RTS
-;; 
+;;
 .LA1DF EQUB &00         ;; ;; Flag = &00
        EQUB &00         ;; ;; &FFFFC900
        EQUB &C9
@@ -4670,7 +4689,7 @@ CPU 1
        EQUB &00
        EQUB &01         ;; ;; 1 sector
        EQUB &00
-;; 
+;;
 .LA1EA LDA #&00
        LDX #&03
 .LA1EE STA &C215,X
@@ -4684,7 +4703,7 @@ CPU 1
        DEX
        BPL LA1FC
        RTS
-;; 
+;;
 .LA206 LDA &C218
        JSR L9322
        LDA &C217
@@ -4758,7 +4777,7 @@ CPU 1
        CPY #&13
        BNE LA29D
        JMP L8F91
-;; 
+;;
 .LA2B6 JSR LA50D
        LDY #&00
        LDA (&B4),Y
@@ -4776,12 +4795,12 @@ CPU 1
        SBC &C260
        STA &C261
        JMP LA377
-;; 
+;;
 .LA2DB JSR L836B
        EQUB &94         ;; ERR=148
        EQUS "Bad compact"
        EQUB &00
-;; 
+;;
 .LA2EB STA &C215
        INY
        LDA (&B4),Y
@@ -4839,7 +4858,7 @@ CPU 1
        JSR LA389
        BPL LA362
 .LA35F JMP LA2DB
-;; 
+;;
 .LA362 BEQ LA35F
        STA &C261
        CLC
@@ -4849,7 +4868,7 @@ CPU 1
        CMP #&80
        BEQ LA377
        JMP LA2DB
-;; 
+;;
 .LA377 JSR LB210
        JSR L8328
        LDA #&08
@@ -4858,7 +4877,7 @@ CPU 1
        LDA #&08
        TRB &CD
        RTS
-;; 
+;;
 .LA389 LDA &C215,X
        ASL A
        ASL A
@@ -4866,7 +4885,7 @@ CPU 1
        ASL A
        ORA &C216,X
        RTS
-;; 
+;;
 .LA394 JSR LA4F5
        LDA &B5
        PHA
@@ -4884,7 +4903,7 @@ CPU 1
        STA &B5
        STA &C241
        RTS
-;; 
+;;
 .LA3B5 JSR LA4B1
        JSR L89D8
        LDA &C2D6        ;; Get FSC function
@@ -4894,12 +4913,12 @@ CPU 1
        LDX &C0
        LDY &C1
        JMP L9A4C        ;; Pass on to FSC to call libfs
-;; 
+;;
 .LA3CB JSR L836B        ;; Generate error
        EQUB &FE         ;; ERR=254
        EQUS "Bad command"
        EQUB &00
-;; 
+;;
 ;; FSC 2,4,11 - */, *RUN, *RUN from library
 ;; ========================================
 .LA3DB LDA &B4
@@ -4938,7 +4957,7 @@ CPU 1
        LDX #<L9A9C         ;; Point to E.-ADFS-$.!BOOT
        LDY #>L9A9C
        JMP &FFF7
-;; 
+;;
 .LA42A LDY #&0B
        LDA (&B6),Y
        INY
@@ -4951,6 +4970,7 @@ CPU 1
        EQUB &93         ;; ERR=147
        EQUS "No!"
        EQUB &00
+;;
 .LA43F LDA #&A5
        STA &C2A8
        LDX #&A2
@@ -4964,7 +4984,7 @@ CPU 1
        ORA (&B6),Y
        BMI LA45C
        JMP L8BFB
-;; 
+;;
 .LA45C JSR L8C1B
        LDA &C2AB
        CMP #&FF
@@ -4974,7 +4994,7 @@ CPU 1
        BCC LA472
 .LA46D LDA #&01
        JMP (&C2A8)
-;; 
+;;
 .LA472 BIT &CD
        BPL LA46D
        JSR L8032
@@ -4982,7 +5002,7 @@ CPU 1
        LDY #&C2
        LDA #&04
        JMP &0406
-;; 
+;;
 .LA482 JSR L9486
        LDY #&09
 .LA487 LDA &C8CC,Y
@@ -4995,7 +5015,7 @@ CPU 1
        DEY
        BPL LA492
 .LA49B JMP L89D8
-;; 
+;;
 .LA49E LDY #&03
 .LA4A0 LDA &C314,Y
        STA &C230,Y
@@ -5010,17 +5030,17 @@ CPU 1
        DEY
        BPL LA4B3
        RTS
-;; 
+;;
 .LA4BD JSR LA49E
        JSR LA4B1
        JSR L93DB
        JMP L89D8
-;; 
+;;
 .LA4C9 JSR LA49E
        JSR LA4B1
        JSR L943D
        JMP L89D8
-;; 
+;;
 .LA4D5 LDY #&03
 .LA4D7 LDA &C31C,Y
        STA &C22C,Y
@@ -5035,7 +5055,7 @@ CPU 1
        DEY
        BPL LA4EB
        RTS
-;; 
+;;
 .LA4F5 LDY #&00
 .LA4F7 JSR L8743
        BEQ LA4FF
@@ -5049,7 +5069,7 @@ CPU 1
        STA &B4
        BCC LA50D
        INC &B5
-;; 
+;;
 .LA50D LDY #&00
        CLC
        PHP
@@ -5062,7 +5082,7 @@ CPU 1
        PLP
        BCC LA523
        JMP L8760
-;; 
+;;
 .LA523 SEC
        PHP
 .LA525 INY
@@ -5075,14 +5095,14 @@ CPU 1
        BCC LA533
        INC &B5
 .LA533 RTS
-;; 
+;;
 .LA534 LDY #&00
        LDA (&B4),Y
        AND #&7F
        CMP #&3A
        BNE LA533
 .LA53E JMP L8988
-;; 
+;;
 .LA541 LDA &B4
        PHA
        LDA &B5
@@ -5092,7 +5112,7 @@ CPU 1
        JSR L8BF0
        BEQ LA555
        JMP L8BD3
-;; 
+;;
 .LA555 LDY #&03
        LDA (&B6),Y
        JSR L89D8
@@ -5170,7 +5190,7 @@ CPU 1
        BCC LA5FA
        INY
        BRA LA5E0
-;; 
+;;
 .LA5EF TYA
        ADC &B4
        STA &B4
@@ -5195,9 +5215,9 @@ CPU 1
        JSR L8F91
        JSR LA6BB
        JMP L89D8
-;; 
+;;
 .LA622 JMP L95AB
-;; 
+;;
 .LA625 LDA &C237
        BNE LA622
        LDY #&09
@@ -5268,12 +5288,12 @@ CPU 1
        BPL LA6AF
        JSR L921B
        JMP L89D8
-;; 
+;;
 .LA6BB LDY #&03
        LDA (&B6),Y
        BMI LA6C2
        RTS
-;; 
+;;
 .LA6C2 LDY #&02
 .LA6C4 LDA &C314,Y
        STA &C270,Y
@@ -5301,7 +5321,7 @@ CPU 1
        DEY
        BPL LA6F1
        JMP L8F91
-;; 
+;;
 ;; Check loaded directory
 ;; ----------------------
 .LA6FD LDX &C317        ;; Get current drive
@@ -5311,7 +5331,7 @@ CPU 1
        EQUB &A9         ;; ERR=169
        EQUS "No directory"
        EQUB &00
-;; 
+;;
 .LA714 JSR LA6FD        ;; Check if directory loaded
        LDX #&00         ;; Point to first character to check
        LDA &C8FA        ;; Get initial character
@@ -5324,12 +5344,12 @@ CPU 1
        CPX #&05
        BNE LA71C        ;; Loop for 4 characters
 .LA72E RTS
-;; 
+;;
 .LA72F JSR L834E        ;; Generate error
        EQUB &A8         ;; ERR=168
        EQUS "Broken directory"
        EQUB &00
-;; 
+;;
 ;; Get pointer to workspace into &BA/B
 ;; ===================================
 .LA744 LDX &F4
@@ -5338,8 +5358,8 @@ CPU 1
        LDA #&00
        STA &BA
        RTS
-;; 
-;; 
+;;
+;;
 ;; Calculate workspace checksum
 ;; ----------------------------
 .LA750 JSR LA744        ;; Find workspace
@@ -5352,13 +5372,13 @@ CPU 1
        ADC (&BA),Y      ;; Add zeroth byte
        LDY #&FE         ;; Point to checksum
        RTS
-;; 
+;;
 ;; Set workspace checksum
 ;; ----------------------
 .LA761 JSR LA750        ;; Calculate workspace checksum
        STA (&BA),Y      ;; Store checksum
 .LA766 RTS
-;; 
+;;
 ;; Check workspace checksum
 ;; ------------------------
 .LA767 JSR LA750        ;; Calculate workspace checksum
@@ -5370,7 +5390,7 @@ CPU 1
        EQUB &AA         ;; ERR=170
        EQUS "Bad sum"
        EQUB &00
-;; 
+;;
 .LA77F PHP              ;; Save all registers
        PHA
        PHY
@@ -5413,7 +5433,7 @@ CPU 1
        PLA
        PLP
        RTS
-;; 
+;;
 .LA7C9 LDX #&78
        TXA
        CLC
@@ -5421,7 +5441,7 @@ CPU 1
        DEX
        BNE LA7CD
        RTS
-;; 
+;;
 .LA7D4 PHP              ;; Save all registers
        PHA
        PHY
@@ -5436,7 +5456,7 @@ CPU 1
        PLA
        PLP
        RTS
-;; 
+;;
 .LA7EC LDA &C291
        STA &B4
        LDA &C292
@@ -5460,7 +5480,7 @@ CPU 1
        DEY
        BPL LA80D
        JMP L82AA
-;; 
+;;
 .LA821 LDX #&0B
 .LA823 LDA L883B,X
        STA &C214,X
@@ -5479,7 +5499,7 @@ CPU 1
        LDX #<L8831
        LDY #>L8831
        JMP L82AE
-;; 
+;;
 .LA849 LDA #&7F
        STA &B8
        LDA #&C2
@@ -5491,7 +5511,7 @@ CPU 1
        JSR L8BBE
        BEQ LA863
        JMP L8BD3
-;; 
+;;
 .LA863 LDA &B6
        STA &C293
        LDA &B7
@@ -5515,7 +5535,7 @@ CPU 1
        JSR L8743
        BNE LA89B
        JMP L8760
-;; 
+;;
 .LA89B JSR L9486
        JSR L8FF3
        LDY #&03
@@ -5532,11 +5552,11 @@ CPU 1
 .LA8B8 BIT &FF
        BPL LA8BF
        JMP L82CC
-;; 
+;;
 .LA8BF JSR L8964
        BEQ LA8AF
        JMP L89D8
-;; 
+;;
 .LA8C7 LDA &B6
        STA &C293
        LDA &B7
@@ -5606,7 +5626,7 @@ CPU 1
        JSR L8F91
        JSR LA7EC
        JMP LA8B8
-;; 
+;;
 ;; FSC 6 - New FS taking over
 ;; ==========================
 .LA96D LDX &C317
@@ -5615,7 +5635,7 @@ CPU 1
        JSR L89D8
        LDA #&FF         ;; Continue into OSARGS &FF,0
        LDY #&00         ;;  to ensure all files
-;; 
+;;
 ;; OSARGS
 ;; ======
 .LA97A CPY #&00
@@ -5624,21 +5644,21 @@ CPU 1
        BNE LA984        ;; Jump with OSARGS Y=0, info on filing system
        LDA #&08         ;; OSARGS 0,0 - return filing system number
 .LA983 RTS
-;; 
+;;
 ;; OSARGS Y=0 - Info on filing system
 ;; ----------------------------------
 .LA984 JSR LA77F        ;; Check FSM
        STX &C3          ;; Store X, pointer to data word in zero page
        DEY              ;; Y=&FF
        BNE LA992        ;; Jump forward
-;; 
+;;
 ;; Exit OSARGS Y=0
 ;; ---------------
 .LA98C LDX &C3          ;; Restore X
        LDA #&00         ;; A=0
        TAY              ;; Y=0
        RTS
-;; 
+;;
 ;; OSARGS Y=0 - implement all calls as ENSURE (A=&FF)
 ;; --------------------------------------------------
 .LA992 LDX #&10
@@ -5652,7 +5672,7 @@ CPU 1
        INC &C204
        JSR L8328        ;; Wait for ensuring to complete
        BRA LA98C        ;; Exit
-;; 
+;;
 ;; OSARGS Y<>0 - Info on open channel
 ;; ----------------------------------
 .LA9A8 JSR LA77F        ;; Check FSM
@@ -5664,7 +5684,7 @@ CPU 1
        LDY &CF          ;; Y=offset to channel info
        TAX
        BNE LA9DA        ;; Jump if not 0, not =PTR
-;; 
+;;
 ;; OSARGS 0,Y - Read PTR
 ;; ---------------------
        LDX &C3          ;; Get pointer to data word
@@ -5681,7 +5701,7 @@ CPU 1
        LDX &C3          ;; Restore X,Y
        LDY &C2
        RTS
-;; 
+;;
 ;; OSARGS 1,Y - Write PTR
 ;; ----------------------
 .LA9DA DEX
@@ -5709,7 +5729,7 @@ CPU 1
        LDA &03,X
        STA &C35C,Y
        JMP LA9D0
-;; 
+;;
 .LAA16 LDX &C3
        LDY &CF
        SEC
@@ -5731,12 +5751,12 @@ CPU 1
        LDA &03,X
        STA &C35C,Y
        JMP LA9D0
-;; 
+;;
 .LAA48 JSR L836B
        EQUB &B7         ;; ERR=183
        EQUS "Outside file"
        EQUB &00
-;; 
+;;
 ;; OSARGS 2,Y - Read EXT
 ;; ---------------------
 .LAA59 DEX
@@ -5751,7 +5771,7 @@ CPU 1
        LDA &C334,Y
        STA &03,X
 .LAA72 JMP LA9D0
-;; 
+;;
 ;; OSARGS 3,Y - Write EXT
 ;; ----------------------
 .LAA75 DEX
@@ -5760,7 +5780,7 @@ CPU 1
        LDA &C3AC,Y
        BMI LAA82
        JMP LB0FA
-;; 
+;;
 .LAA82 LDA &00,X
        STA &C29A
        LDA &01,X
@@ -5783,7 +5803,7 @@ CPU 1
        JSR LAD25
        BCS LAA72
        JMP LA9E2
-;; 
+;;
 ;; OSARGS 4+,Y - treat as OSARGS &FF,Y - Ensure File
 ;; -------------------------------------------------
 .LAAB9 LDX #&10
@@ -5802,7 +5822,7 @@ CPU 1
        DEX
        BPL LAABB
        JMP LA98C
-;; 
+;;
 ;; Send a command block to SCSI for BGET/BPUT
 ;; ------------------------------------------
 .LAAD9 PHA
@@ -5821,7 +5841,7 @@ CPU 1
        JSR L831E
        LDA #&00
        JMP L831E
-;; 
+;;
 .LAB03 JSR LACE6        ;; Check checksum
 .LAB06 JSR LABB4        ;; Check for data lost
        LDA &C204,X
@@ -5861,7 +5881,7 @@ CPU 1
        DEC &CE
        BPL LAB50
        JMP L82BD
-;; 
+;;
 ;; BPUT to hard drive
 ;; --------------------
 .LAB5E LDX &C1          ;; Get something
@@ -5874,7 +5894,7 @@ CPU 1
        DEC &CE          ;; Decrease retries
        BPL LAB5E        ;; Loop to try again
        JMP L82BD        ;; Generate a disk error
-;; 
+;;
 ;; Write a BPUT buffer to hard drive
 ;; ---------------------------------
 .LAB76 LDA (&BC),Y      ;; Get byte from buffer
@@ -5887,7 +5907,7 @@ CPU 1
        STY &FC43        ;; Set &FC43 to &FF
 .LAB86 LDX &C1
 .LAB88 RTS
-;; 
+;;
 ;; Service 5 - Interupt occured
 ;; ============================
 .LAB89 LDA &CD          ;; Get flags
@@ -5899,7 +5919,7 @@ CPU 1
        BEQ LAB9B
 .LAB98 LDA #&05         ;; Return from service call
        RTS
-;; 
+;;
 .LAB9B PHY              ;; Send something to SCSI
        LDA #&00
        STA &FC43
@@ -5910,8 +5930,8 @@ CPU 1
        ORA &FC40
        STA &C331
        JMP L9DB4        ;; Restore Y,X, claim call
-;; 
-;; 
+;;
+;;
 ;; Check for data loss
 ;; ===================
 .LABB4 LDA &C331
@@ -5920,17 +5940,10 @@ CPU 1
        STA &C331        ;; Clear the flag
        LDX &C2D4
        JSR L8374        ;; Generate 'Data lost' error
-       DEX
-       EQUB &44
-       ADC (&74,X)
-       ADC (&20,X)
-       JMP (&736F)
-       STZ &2C,X
-       JSR &6863
-       ADC (&6E,X)
-       ROR &6C65
-       BRK
-;; 
+       EQUB &CA         ;; ERR=202
+       EQUS "Data lost, channel"
+       EQUB &00
+;;
 .LABD8 TXA
        STX &C2A1
        LSR A
@@ -5940,8 +5953,8 @@ CPU 1
        LDA #&00
        STA &BE
 .LABE6 RTS
-;; 
-;; 
+;;
+;;
 .LABE7 LDX #&10
        STX &C295
        TAY
@@ -6009,14 +6022,14 @@ CPU 1
        SEC
        ROL &C204,X
 .LAC6E JMP LAB03
-;; 
+;;
 .LAC71 DEX
        DEX
        DEX
        DEX
        BMI LAC7A
        JMP LABED
-;; 
+;;
 .LAC7A LDX &C295
        LDA &C296
        STA &C201,X
@@ -6044,7 +6057,7 @@ CPU 1
 .LACBA DEC &CE          ;; Decrement retries
        BPL LACA8        ;; Loop to rey again
        JMP L82BD        ;; Generate a disk error
-;; 
+;;
 ;; BGET from hard drive
 ;; --------------------
 .LACC1 LDA #&08         ;; &08 - READ
@@ -6063,7 +6076,7 @@ CPU 1
        LDA #&81
        STA &C204,X
        JMP LAC17
-;; 
+;;
 .LACE6 LDX #&10
 .LACE8 LDA &C204,X
        AND #&01
@@ -6074,11 +6087,12 @@ CPU 1
        DEX
        BPL LACE8
        JMP LA76E
-;; 
+;;
 .LACF8 JSR L836B
        EQUB &DE         ;; ERR=222
        EQUS "Channel"
        EQUB &00
+;;
 .LAD04 DEX
        DEX
        DEX
@@ -6086,7 +6100,7 @@ CPU 1
        BPL LAD0C
        LDX #&10
 .LAD0C RTS
-;; 
+;;
 ;; Check channel and get channel flags
 ;; -----------------------------------
 .LAD0D STY &C2          ;; Save channel
@@ -6102,7 +6116,7 @@ CPU 1
        LDA &C3AC,X      ;; Get channel flags
        BEQ LACF8        ;; Channel not open - error
 .LAD24 RTS
-;; 
+;;
 ;; &C3AC,X channel flags
 ;; &C334,X
 ;; &C33E,X
@@ -6112,7 +6126,7 @@ CPU 1
 ;; &C366,X
 ;; &C370,X
 ;; &C37A,X
-;; 
+;;
 ;; Compare something
 ;; -----------------
 .LAD25 LDX &CF          ;; Get channel offset
@@ -6130,7 +6144,7 @@ CPU 1
        BNE LAD48        ;; Different, so end with NE+CC/CS
        CLC              ;; All same, set EQ+CC
 .LAD48 RTS
-;; 
+;;
 ;; FSC 1 - Read EOF
 ;; ================
 .LAD49 LDY &B4
@@ -6145,7 +6159,7 @@ CPU 1
        DEX
 .LAD5F LDY &B5
        RTS
-;; 
+;;
 .LAD62 LDA &C3AC,X
        AND #&C8
        STA &C3AC,X
@@ -6153,7 +6167,7 @@ CPU 1
        EQUB &DF         ;; ERR=150
        EQUS "EOF"
        EQUB &00
-;; 
+;;
 ;; OSBGET
 ;; ======
 .LAD72 STX &C3          ;; Save X
@@ -6176,7 +6190,7 @@ CPU 1
        SEC              ;; Flag EOF
        LDA #&FE         ;; EOF value
        RTS              ;; Return
-;; 
+;;
 ;; Read byte from channel
 ;; ----------------------
 .LAD9C LDX &CF          ;; Get channel offset
@@ -6202,7 +6216,7 @@ CPU 1
        LDX &C3          ;; Restore X
        CLC              ;; Clear EOF flag
        RTS              ;; Return
-;; 
+;;
 .LADD4 LDY #&02
 .LADD6 LDA &C314,Y
        STA &C230,Y
@@ -6247,7 +6261,7 @@ CPU 1
        BNE LAE44
        STA &C3AC,X
        JMP LA76E
-;; 
+;;
 .LAE44 LDY #&19
        LDA (&B8),Y
        CMP &C3F2,X
@@ -6260,7 +6274,7 @@ CPU 1
        CPY #&16
        BCS LAE4E
        RTS
-;; 
+;;
 .LAE5B LDA &B8
        CLC
        ADC #&1A
@@ -6306,10 +6320,10 @@ CPU 1
        CMP &C29A
        BNE LAECB
 .LAEC8 JMP LB0DA
-;; 
+;;
 .LAECB BCS LAEC8
        JMP LAFE4
-;; 
+;;
 .LAED0 JSR LADD4
        LDA &C3A2,X
        CMP #&01
@@ -6346,7 +6360,7 @@ CPU 1
        BPL LAF1D
        TXA
        BRA LAF2D
-;; 
+;;
 .LAF2A DEX
        DEX
        DEX
@@ -6365,7 +6379,7 @@ CPU 1
        INY
        BNE LAF4E
        JMP L867F
-;; 
+;;
 .LAF4E BCC LAF5E
        CPY &C23F
        BCC LAF5E
@@ -6433,7 +6447,7 @@ CPU 1
 .LAFE4 LDA &C2B5
        BEQ LAFEC
        JMP LB0BD
-;; 
+;;
 .LAFEC LDX &CF
        CLC
        LDA &C348,X
@@ -6482,7 +6496,7 @@ CPU 1
        CMP &C298
        BNE LB06A
        JMP LB0BD
-;; 
+;;
 .LB06A JSR L8328
        INC &C296
        BNE LB07A
@@ -6516,7 +6530,7 @@ CPU 1
        BNE LB087
        INC &C203,X
        JMP LB087
-;; 
+;;
 .LB0BD LDX &CF
        LDA &C29A
        STA &C352,X
@@ -6535,7 +6549,7 @@ CPU 1
        DEX
        BPL LB0E2
        RTS
-;; 
+;;
 ;; OSBPUT
 ;; ======
 .LB0EC STX &C3          ;; Save X
@@ -6549,7 +6563,7 @@ CPU 1
        EQUB &C1         ;; ERR=193
        EQUS "Not open for update"
        EQUB &00
-;; 
+;;
 .LB112 LDA &C3AC,X
        AND #&07
        CMP #&06
@@ -6597,7 +6611,7 @@ CPU 1
        LDY &C2
        LDX &C3
 .LB17F RTS
-;; 
+;;
 .LB180 LDX &CF
        INC &C37A,X
        BNE LB17F
@@ -6644,7 +6658,7 @@ CPU 1
        AND #&F9
 .LB1E5 STA &C3AC,X
        RTS
-;; 
+;;
 .LB1E9 LDX &CF          ;; Get channel offset
        LDA &C3AC,X
        PHA
@@ -6663,8 +6677,8 @@ CPU 1
        BNE LB1E5
 .LB210 LDA #&00         ;; A=0 for CLOSE
        TAY              ;; CLOSE#0 - close all open channels
-;; 
-;; 
+;;
+;;
 ;; OSFIND - Open a file or close a channel
 ;; =======================================
 .LB213 JSR LA77F        ;; Check checksums
@@ -6680,7 +6694,7 @@ CPU 1
        TAY              ;; Zero A and Y
        BNE LB231        ;; Jump ahead for open
        JMP LB3E0        ;; Jump to close
-;; 
+;;
 ;; OPEN
 ;; ----
 .LB231 LDA &C332        ;; Handle stored from *RUN?
@@ -6689,7 +6703,7 @@ CPU 1
        STY &C332        ;; Clear stored handle
        LDY &B5          ;; Restore Y
        RTS              ;; Return handle from *RUN
-;; 
+;;
 ;; Open a file
 ;; -----------
 .LB23E LDX #&09         ;; Look for a spare channel
@@ -6701,7 +6715,7 @@ CPU 1
        EQUB &C0         ;; ERR=192
        EQUS "Too many open files"
        EQUB &00
-;; 
+;;
 ;; Found a spare channel
 ;; ---------------------
 .LB260 STX &CF          ;; Store channel offset
@@ -6709,12 +6723,12 @@ CPU 1
        TYA
        BPL LB26B
        JMP LB33E
-;; 
+;;
 .LB26B JSR L8FE8
        BEQ LB275
        LDA #&00
        JMP LB336
-;; 
+;;
 .LB275 LDX #&09
 .LB277 LDA &C3AC,X
        BPL LB2AA
@@ -6736,14 +6750,14 @@ CPU 1
        CMP &C3F2,X
        BNE LB2AA
        JMP L8D5E
-;; 
+;;
 .LB2AA DEX
        BPL LB277
        LDY #&00
        LDA (&B6),Y
        BMI LB2B6
        JMP L8BFB
-;; 
+;;
 .LB2B6 LDY #&12
        LDX &CF
        LDA (&B6),Y
@@ -6806,7 +6820,7 @@ CPU 1
        LDX &C5
        LDY &C4
        RTS
-;; 
+;;
 .LB33E BIT &C2A0
        BVC LB35B
        JSR L8FE8
@@ -6819,9 +6833,9 @@ CPU 1
        LDA (&B6),Y
        BMI LB358
 .LB355 JMP L8BFB
-;; 
+;;
 .LB358 JMP LB275
-;; 
+;;
 .LB35B JSR L8DC8
        JSR L8FE8
        BNE LB36F
@@ -6830,7 +6844,7 @@ CPU 1
        LDA (&B6),Y
        BPL LB355
        JMP LB3CD
-;; 
+;;
 .LB36F LDA #&00
        LDX #&0F
 .LB373 STA &C242,X
@@ -6878,7 +6892,7 @@ CPU 1
        STA &C33E,X
        STA &C334,X
        JMP LB2D1
-;; 
+;;
 ;; CLOSE a channel
 ;; ===============
 .LB3E0 LDY &C4          ;; Get handle
@@ -6893,7 +6907,7 @@ CPU 1
        LDX &C5          ;; Restore X
        TAY              ;; Clear Y
        RTS              ;; Returns with A and Y preserved
-;; 
+;;
 ;; Close a channel with X=offset
 ;; -----------------------------
 .LB3F7 TXA
@@ -6904,7 +6918,7 @@ CPU 1
        JSR LB409        ;; Close this channel
        LDX &CF          ;; Restore X
        BPL LB3EB        ;; Jump back into close-all loop
-;; 
+;;
 ;; Close a channel with Y=handle
 ;; -----------------------------
 .LB406 JSR LAD0D        ;; Check channel and get flags
@@ -6931,7 +6945,7 @@ CPU 1
        LDY &C4
        LDX &C5
        RTS
-;; 
+;;
 ;; Update directory entry?
 ;; -----------------------
 .LB442 JSR LADD4
@@ -6979,7 +6993,7 @@ CPU 1
        JSR L84E1        ;; Calculate something in FSM
        JSR L8F91
        JMP LB435        ;; Jump back to write buffer?
-;; 
+;;
 .LB4B9 LDX #&09
 .LB4BB LDA &C3AC,X
        BEQ LB4CA
@@ -6989,7 +7003,7 @@ CPU 1
        BEQ LB4DF
 .LB4CA DEX
        BPL LB4BB
-;; 
+;;
 .LB4CD LDA &C317
        JSR LB5C5
        LDA &C1FB
@@ -7008,12 +7022,12 @@ CPU 1
        JSR LB560
        STA &C2C2
        RTS
-;; 
+;;
 .LB4FF JSR L836B
        EQUB &C8         ;; ERR=200
        EQUS "Disc changed"
        EQUB &00
-;; 
+;;
 .LB510 LDA #&01
        LDX #&C8
        LDY #&C2
@@ -7039,7 +7053,7 @@ CPU 1
        BCC LB545
 .LB542 STY &C2C2
 .LB545 RTS
-;; 
+;;
 .LB546 JSR LB510
        LDA &C317
        JSR LB5C5
@@ -7050,7 +7064,7 @@ CPU 1
        LDY #>L8831
        JSR L82AE
        BRA LB4E2
-;; 
+;;
 .LB560 LDA #&FF
        CLC
 .LB563 ROL A
@@ -7059,7 +7073,7 @@ CPU 1
        BPL LB563
        AND &C2C2
        RTS
-;; 
+;;
 .LB56C AND #&E0
        STA &C2CD
        PHX
@@ -7098,14 +7112,14 @@ CPU 1
 .LB5C2 PLY
        PLX
        RTS
-;; 
+;;
 .LB5C5 LSR A
        LSR A
        LSR A
        LSR A
        TAX
        RTS
-;; 
+;;
 .LB5CB JSR LA77F
        STA &C2B4
        STA &C2B5
@@ -7122,9 +7136,9 @@ CPU 1
        CMP #&05
        BCC LB5F0
        JMP LB8DA
-;; 
+;;
 .LB5EF RTS
-;; 
+;;
 .LB5F0 TAY
        BEQ LB5EF
        LDY #&00
@@ -7142,7 +7156,7 @@ CPU 1
        CMP #&03
        BCS LB614
        JMP LB0FA
-;; 
+;;
 .LB614 LDA &C2B4
        AND #&01
        BEQ LB629
@@ -7201,7 +7215,7 @@ CPU 1
        DEX
        BPL LB680
        JMP LB6FE
-;; 
+;;
 .LB690 JSR LAD25
        BCS LB67C
        BEQ LB67C
@@ -7261,7 +7275,7 @@ CPU 1
        LDA &C8
        BNE LB715
        JMP LB7A5
-;; 
+;;
 .LB715 LDX &CF
        CLC
        LDA &C3CA,X
@@ -7297,7 +7311,7 @@ CPU 1
        LDX &C6
        LDY &C7
        RTS
-;; 
+;;
 .LB768 JSR LB9CA
        LDA #&00
        SEC
@@ -7329,7 +7343,7 @@ CPU 1
        ORA &C243
        BNE LB7B3
        JMP LB82B
-;; 
+;;
 .LB7B3 LDA #&01
        STA &C215
        LDY #&03
@@ -7383,7 +7397,7 @@ CPU 1
 .LB82B LDA &C29A
        BNE LB833
        JMP LB758
-;; 
+;;
 .LB833 LDX &CF
        CLC
        LDA &C3CA,X
@@ -7405,7 +7419,7 @@ CPU 1
        STA &C2B7
        JSR LB9CA
        JMP LB758
-;; 
+;;
 .LB86B BIT &CD
        BPL LB898
        LDA &C2BA
@@ -7433,12 +7447,12 @@ CPU 1
        LDA &C2B9
        STA &B3
        RTS
-;; 
+;;
 .LB8A5 BIT &CD
        BVC LB8AD
        STA &FEE5
        RTS
-;; 
+;;
 .LB8AD STY &BC
        LDY &BD
        STA (&B2),Y
@@ -7447,7 +7461,7 @@ CPU 1
        INC &B3
 .LB8B9 LDY &BC
        RTS
-;; 
+;;
 .LB8BC LDA #&0A
        JSR LB8A5
        SEC
@@ -7464,7 +7478,7 @@ CPU 1
        DEX
        BPL LB8C6
        RTS
-;; 
+;;
 .LB8DA SBC #&05
        TAY
        BEQ LB8EB
@@ -7475,7 +7489,7 @@ CPU 1
        DEY
        BNE LB925
        JMP LB96A
-;; 
+;;
 .LB8EB JSR LB86B
        LDY #&FF
 .LB8F0 INY
@@ -7506,7 +7520,7 @@ CPU 1
        JSR LB8A5
 .LB925 JSR L803A
        JMP LB75E
-;; 
+;;
 .LB92B JSR LB86B
        LDA #&01
        JSR LB8A5
@@ -7524,7 +7538,7 @@ CPU 1
        ROL A
        ADC #&30
        JMP LB8A5
-;; 
+;;
 .LB94F JSR LB86B
        LDA #&01
        JSR LB8A5
@@ -7584,12 +7598,12 @@ CPU 1
        LDA &B1
        STA (&C6),Y
        JMP LB925
-;; 
+;;
 .LB9CA LDA &C2B6
        CMP &C2B7
        BNE LB9D3
        RTS
-;; 
+;;
 .LB9D3 BIT &CD
        BPL LBA03
        LDA &C2BA
@@ -7645,25 +7659,25 @@ CPU 1
        BNE LBA1C
        PLP
        JMP L803A
-;; 
-;; 
+;;
+;;
 ;; ACCESS FLOPPY CONTROLLER
 ;; ========================
-;; 
+;;
 ;; Pass SCSI command to floppy controller
 ;; --------------------------------------
 .LBA4B JMP LBB46        ;; Do a SCSI action with floppy drive
-;; 
+;;
 .LBA4E JMP LBB57
-;; 
+;;
 .LBA51 JMP LBA5D
-;; 
+;;
 .LBA54 JMP LBA61
-;; 
+;;
 .LBA57 LDA #&FF
        STA &C2E4
        RTS
-;; 
+;;
 .LBA5D LDA #&40
        BNE LBA63
 .LBA61 LDA #&C0
@@ -7692,7 +7706,7 @@ CPU 1
        BEQ LBA99
 .LBA95 PLA
        JMP LBF6F
-;; 
+;;
 .LBA99 PLA
        PHA
        AND #&40
@@ -7738,7 +7752,7 @@ CPU 1
 .LBAF1 JSR LBAFA
        JSR LBD1E
        JMP LBFB7
-;; 
+;;
 .LBAFA JSR LBD46
        LDX #&00
        JSR LBB3B
@@ -7758,7 +7772,7 @@ CPU 1
        ROR A
        BCC LBB26
 .LBB23 JMP LBFB7
-;; 
+;;
 .LBB26 LDA &A5
        STA &A3
        BIT &A1
@@ -7769,14 +7783,14 @@ CPU 1
        BNE LBB38
        BEQ LBB23
 .LBB38 JMP LBD46
-;; 
+;;
 .LBB3B LDA &A3,X
 .LBB3D STA &FE29,X      ;; Store in FDC Track/Sector
        CMP &FE29,X      ;; Keep storing until it stays there
        BNE LBB3D
        RTS
-;; 
-;; 
+;;
+;;
 ;; Access Floppy Disk Controller
 ;; -----------------------------
 .LBB46 TSX
@@ -7797,7 +7811,7 @@ CPU 1
        JSR LBB72
        JSR LBD6E
        JMP LBFB7
-;; 
+;;
 .LBB72 STZ &C2E3
        LDY #&01         ;; Point to address
        LDA (&B0),Y
@@ -7830,18 +7844,18 @@ CPU 1
        LDA #&67         ;; Floppy error &27 'Unsupported command'
        STA &C2E3
        JMP LBFB7        ;; Jump to return with result=&67
-;; 
+;;
 ;; Read from floppy
 ;; ----------------
 .LBBB0 LDA #&80
        TSB &C2E0
-;; 
+;;
 ;; Write to floppy
 ;; ---------------
 .LBBB5 JSR LBBDE
        JSR LBBBE
        JMP LBF0A
-;; 
+;;
 .LBBBE JSR LBC01
        LDA &C2E8
        STA &0D5C
@@ -7855,7 +7869,7 @@ CPU 1
        STA &0D5D
        JSR LBC18
        RTS
-;; 
+;;
 .LBBDE STZ &0D56
        STZ &C2E8
        LDX #&0B
@@ -7873,7 +7887,7 @@ CPU 1
        LDA #&02
        STA &0D56
 .LBC00 RTS
-;; 
+;;
 ;; Claim NMI space
 ;; ---------------
 .LBC01 LDA #&8F
@@ -7882,14 +7896,14 @@ CPU 1
        JSR &FFF4        ;; Claim NMI space
        STY &C2E1        ;; Store previous owner's ID
        RTS
-;; 
+;;
 ;; Release NMI space
 ;; -----------------
 .LBC0E LDY &C2E1        ;; Get previous owner's ID
        LDA #&8F
        LDX #&0B
        JMP &FFF4        ;; Release NMI
-;; 
+;;
 ;; Copy NMI code to NMI space
 ;; --------------------------
 .LBC18 LDY #&44
@@ -7919,7 +7933,7 @@ CPU 1
        LDA &F4
        STA &0D32
        RTS
-;; 
+;;
 .LBC54 LDA &A1
        ROL A
        LDA #&00
@@ -7938,14 +7952,14 @@ CPU 1
        DEY
        BPL LBC6D
 .LBC76 RTS
-;; 
+;;
 .LBC77 LDY #&07
 .LBC79 LDA LBD16,Y
        STA &0D0A,Y
        DEY
        BPL LBC79
        RTS
-;; 
+;;
 .LBC83 BIT &A1
        BMI LBC9F
        LDY #&0D
@@ -7960,7 +7974,7 @@ CPU 1
        LDA (&B0),Y
        STA &0D0C
 .LBC9F RTS
-;; 
+;;
 ;; NMI code, copied to &0D00
 ;; -------------------------
 .LBCA0 PHA
@@ -7975,7 +7989,7 @@ CPU 1
        INC &0D0F
 .LBCB8 PLA
        RTI
-;; 
+;;
 .LBCBA AND #&58         ;; Check b3, b4, b6 (CRC, Not Found, Write Prot)
        BEQ LBCCA        ;; No error
        STA &A0          ;; Store as floppy error
@@ -7985,7 +7999,7 @@ CPU 1
        TSB &A2
        PLA
        RTI
-;; 
+;;
 .LBCCA BIT &A2
        BVC LBCC4
        LDA &F4
@@ -8001,12 +8015,12 @@ CPU 1
        STA &FE30
        PLA
        RTI
-;; 
+;;
 .LBCE5 LDA &A2
        ROR A
        BCC LBCEB
        RTS
-;; 
+;;
 .LBCEB LDA &0D5D
        AND #&10
        BEQ LBCE5
@@ -8016,7 +8030,7 @@ CPU 1
        LDA #&6F         ;; Floppy error &2F (Abort)
        STA &A0
        JMP LBFB7
-;; 
+;;
 .LBD00 LDA &FFFF
        STA &FE2B        ;; FDC Data register
        INC &0D0B
@@ -8040,40 +8054,40 @@ CPU 1
 .LBD31 JSR LBD62
        STA &FE28        ;; FDC Status/Command
        JMP LBCE5
-;; 
+;;
        LDA #&10
        TRB &0D5E        ;; Set side 0
        RTS
-;; 
+;;
 .LBD40 LDA #&10
        TSB &0D5E        ;; Set side 1
        RTS
-;; 
+;;
 .LBD46 LDA #&01
        TRB &A2
        RTS
-;; 
+;;
 .LBD4B LDA #&08
        TRB &A2
        RTS
-;; 
+;;
 .LBD50 LDA #&02
        TRB &A2
        RTS
-;; 
+;;
 .LBD55 LDA #&00
        STA &A3
        ORA &0D5C
        STA &FE28        ;; FDC Status/Command
        JMP LBCE5
-;; 
+;;
 .LBD62 ROR &C2E4
        BCC LBD6A
        ORA #&04
        CLC
 .LBD6A ROL &C2E4
        RTS
-;; 
+;;
 .LBD6E LDA &C2E2
        STA &0D0F
        STZ &0D0E
@@ -8110,7 +8124,7 @@ CPU 1
 .LBDB6 PLA
        STA &A3
        RTS
-;; 
+;;
 .LBDBA JSR LBAFA
        LDA #&40
        TSB &A2
@@ -8193,7 +8207,7 @@ CPU 1
        ORA &0D5C
        STA &FE28        ;; FDC Status/Command
        BPL LBE41
-;; 
+;;
 ;; NMI Routine - called from &0D00
 ;; ===============================
 .LBE77 JSR LBD46
@@ -8203,13 +8217,13 @@ CPU 1
        LDA #&01
        TSB &A2
        RTS
-;; 
+;;
 .LBE85 JSR LBD50
        LDA &A6
        JSR LBD62
        STA &FE28        ;; FDC Status/Command
 .LBE90 RTS
-;; 
+;;
 .LBE91 LDA &0D58
        BNE LBEF8
        LDA &0D57
@@ -8220,7 +8234,7 @@ CPU 1
        BEQ LBF09
 .LBEA4 DEC &0D59
        JMP LBEFB
-;; 
+;;
 .LBEAA LDA &0D5A
        BNE LBEF2
        LDA #&01
@@ -8233,7 +8247,7 @@ CPU 1
        BEQ LBEC7
        LDX #&00
        JMP LBEFD
-;; 
+;;
 .LBEC7 LDA #&FF
        STA &A3
        JSR LBD40
@@ -8255,7 +8269,7 @@ CPU 1
        BEQ LBEFD
 .LBEF2 DEC &0D5A
        JMP LBEFB
-;; 
+;;
 .LBEF8 DEC &0D58
 .LBEFB LDX #&FF
 .LBEFD INC &A4
@@ -8264,7 +8278,7 @@ CPU 1
        CMP &FE2A        ;; Keep storing until it stays there
        BNE LBEFF
 .LBF09 RTS
-;; 
+;;
 ;;   &A0  Returned error, &40+FDC status or &40+scsi error
 ;;   &A1  b7=write/read, b5=??, b0=error occured?
 ;;   &A2  b0=?
@@ -8273,7 +8287,7 @@ CPU 1
 ;;   &A5 track
 ;;   &A6 drive
 ;;   &A7
-;; 
+;;
 .LBF0A LDY #&06
        LDA (&B0),Y      ;; Get drive
        ORA &C317        ;; OR with current drive
@@ -8281,14 +8295,14 @@ CPU 1
        AND #&1F         ;; Lose drive bits
        BEQ LBF1A
        JMP LBF6F        ;; If sector>&FFFF, jump to 'Sector out of range'
-;; 
+;;
 .LBF1A BIT &A6          ;; Check drive
        BVC LBF24        ;; Drive 0,1,4,5 -> jump ahead
 ;;                                         Can patch here to support drive 2,3,6,7
        LDA #&65         ;; Otherwise, floppy error &25 (Bad drive)
        STA &A0          ;; Set error
        BNE LBF73        ;; Jump to return error
-;; 
+;;
 ;; Drive 0,1,4,5
 ;; -------------
 .LBF24 LDA &A6          ;; Get drive
@@ -8310,14 +8324,14 @@ CPU 1
        BIT &C2E4
        BPL LBF5D
        BMI LBF5A
-;; 
+;;
 .LBF50 LDA &C2E6
        STA &A3
        BIT &C2E4
        BVC LBF5D
 .LBF5A JSR LBD55
 .LBF5D RTS
-;; 
+;;
 .LBF5E LDY #&07
        LDA (&B0),Y      ;; Get sector b8-b15
        CMP #&0A         ;; Check for sector &0A00
@@ -8331,11 +8345,11 @@ CPU 1
        BCC LBF75        ;; Will never follow this jump - should this be BEQ ?
 .LBF6F LDA #&61         ;; Floppy error &21 (Bad address)
        STA &A0
-;; 
+;;
 ;; Jump to return floppy error
 ;; ---------------------------
 .LBF73 BNE LBFB7        ;; Jump to return error in &A0
-;; 
+;;
 ;; This code never entered, as the above BCC LBF75 never followed
 .LBF75 LDA &A1          ;; Get flag
        AND #&10
@@ -8351,7 +8365,7 @@ CPU 1
 .LBF89 LDA #&63         ;; Floppy error &23 (Volume error)
        STA &A0
        BNE LBFB7        ;; Jump to return error
-;; 
+;;
 .LBF8F LDY #&07
        LDA (&B0),Y      ;; Get sector b8-b15
        TAX              ;; Pass to X
@@ -8367,7 +8381,7 @@ CPU 1
        BMI LBFB6        ;; Side 0, leave track as 0-79
        STA &A5          ;; Store track 0-79
        JMP LBD40        ;; Set side 1
-;; 
+;;
 ;; Divide by 16
 ;; ============
 ;; On entry: A=low byte
@@ -8383,7 +8397,7 @@ CPU 1
        BPL LBFAB
        ADC #&10
 .LBFB6 RTS
-;; 
+;;
 ;; Drive 2,3,6,7
 ;; -------------
 .LBFB7 LDX &C2E7
@@ -8400,12 +8414,12 @@ CPU 1
        CLC
        ROR &C2E4        ;; Clear b7
        BCS LBFE1
-;; 
+;;
 .LBFD6 STA &C2E6
        LDA &C2E4
        AND #&BF
        STA &C2E4        ;; Clear b6
-;; 
+;;
 .LBFE1 LDA &A0          ;; Get error
        STA &C2E3        ;; Store in error block
        JSR LBC0E        ;; Release NMI
@@ -8419,5 +8433,5 @@ CPU 1
 .LBFFA LDY &B1
        AND #&7F         ;; Remove bit 7 and set EQ
        RTS              ;; Return with A=error, EQ=Ok
-;; 
-.LBFFF EQUB &A9
+;;
+       EQUB &A9
