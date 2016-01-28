@@ -1,0 +1,94 @@
+#!/bin/bash
+
+SRC=adfs150.lst
+DST=adfs150.asm
+
+# convert tabs to spaces
+expand < $SRC > tmp.lst
+
+# Get rid of any control characters
+sed -i "s/[\d128-\d255]/./g" tmp.lst
+
+# Make every line a comment
+sed -i "s/^/;; /" tmp.lst
+
+
+# Fixup errors in JHG's disassembler
+#
+#847A B8          ¸    SEV
+#should be
+#847A B8          ¸    CLV
+#
+#91B9 96 43       .C   STX &43,X
+#should be
+#91B9 96 43       .C   STX &43,Y
+#
+#93CF B6 A9       ¶©   LDX &A9,X
+#should be
+#93CF B6 A9       ¶©   LDX &A9,Y
+#
+#9C3F BE 53 9A    ¾S.  LDX &9A53,X
+#should be
+#9C3F BE 53 9A    ¾S.  LDX &9A53,Y
+
+sed -i "s/ SEV/ CLV/" tmp.lst
+sed -i "s/ STX &\([0-9A-Z]\{2\}\),X/ STX \&\1,Y/" tmp.lst
+sed -i "s/ LDX &\([0-9A-Z]\{2\}\),X/ LDX \&\1,Y/" tmp.lst
+sed -i "s/ LDX &\([0-9A-Z]\{4\}\),X/ LDX \&\1,Y/" tmp.lst
+
+# Extract the internal label addresses
+sed "s/^.*&\([89AB][0-9A-F]\{3\}\).*/\1/w tmp.labels" <tmp.lst > /dev/null 
+mv tmp.labels x
+sort < x | uniq > tmp.labels
+rm -f x
+
+# Convert any address references to labels
+sed -i "s/&\([89AB][0-9A-F]\{3\}\)/L\1/g" tmp.lst
+
+# Prefix all the labels
+
+for i in `cat tmp.labels`
+do
+   echo $i
+   sed -i "s/^;; \($i\)/LL\1/" tmp.lst
+done
+
+# Get rid of any hex
+sed -i "s/^;; [0-9A-F]\{4\} .\{16\}/      /g" tmp.lst
+
+# Get rid of any hex after labels
+sed -i "s/^\(LL[0-9A-F]\{4\}\) .\{16\}/\1/" tmp.lst
+
+# Comment any trailing text
+sed -i "s/^\([^;].\{20\}\)   \(.*\)/\1   ;;\2/" tmp.lst
+
+# Prefix labels with a .
+sed -i "s/^LL/.L/" tmp.lst
+
+# Change format of BBR instructions
+# actually not needed, these were just data
+#sed -i "s/ BBR \([0-7]\),/;; BBR\1  /" tmp.lst
+#sed -i "s/ BBS \([0-7]\),/;; BBS\1  /" tmp.lst
+
+
+# Manual fixups
+sed -i "s/ROM Title/;;ROM Title/" tmp.lst
+sed -i "s/EQUB &FF       /EQUB \&FF    ;; /" tmp.lst
+sed -i "s/ DEFB/ EQUB/" tmp.lst
+sed -i "s/LBFFD/\&BFFD/" tmp.lst
+sed -i "s/L9272/L9271+1/" tmp.lst
+sed -i "s/L9F2E/L9F2D+1/" tmp.lst
+sed -i "s/L9F2F/L9F2D+2/" tmp.lst
+
+cat > $DST <<EOF
+ORG &8000
+CPU 1
+EOF
+
+cat tmp.lst >> $DST
+
+cat >> $DST <<EOF
+SAVE "ADFS150.rom", &8000, &C000
+EOF
+
+rm tmp.lst tmp.labels
