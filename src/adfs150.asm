@@ -662,10 +662,10 @@ CPU 1
        JSR L84C4
        PHY
        TXA
-       LDX #&BD
+       LDX #<L84BD
        JSR L84CB
        PLA
-       LDX #&C0
+       LDX #<L84C0
        JSR L84CB
        JSR L849A
 .L843D JMP &0100
@@ -734,10 +734,11 @@ CPU 1
        INY
        BNE L84B0
 .L84BC RTS
-;; 
-       EQUS "E."        ;; Abbreviation of 'Exec'
+;;
+.L84BD EQUS "E."        ;; Abbreviation of 'Exec'
        EQUB &0D
-       EQUS "SP."       ;; Abbreviation of 'Spool'
+;;
+.L84C0 EQUS "SP."       ;; Abbreviation of 'Spool'
        EQUB &0D
 ;; 
 ;; OSBYTE READ
@@ -752,7 +753,7 @@ CPU 1
        BCC L84BC        ;; Exit if not ADFS
        CMP #&3A         ;; Check against highest ADFS handle
        BCS L84BC        ;; Exit if not ADFS
-.L84D3 LDY #&84         ;; Point to *Spool or *Exec
+.L84D3 LDY #>L84BD      ;; Point to *Spool or *Exec
        JMP &FFF7        ;; Jump to close via MOS
 ;; 
 .L84D8 EQUS &0D, "SEY"
@@ -1208,7 +1209,7 @@ CPU 1
 .L8830 RTS
 ;; 
 ;; Control block to load FSM
-       EQUB &01
+.L8831 EQUB &01
        EQUB &00
        EQUB &C0
        EQUB &FF
@@ -1288,8 +1289,8 @@ CPU 1
 .L88AA STA &C317        ;; Store in current drive
 .L88AD LDA #&10
        TSB &CD          ;; Flag FSM inconsistant
-       LDX #&31
-       LDY #&88
+       LDX #<L8831
+       LDY #>L8831
        JSR L82AE        ;; Load FSM
        LDA #&10
        TRB &CD          ;; Flag FSM loaded
@@ -1300,8 +1301,8 @@ CPU 1
        STA &C22C,Y
        DEY
        BPL L88C3
-.L88CC LDY #&88
-       LDX #&3C
+.L88CC LDY #>L883C
+       LDX #<L883C
        JSR L82AE        ;; Load '$'
        LDA #&02
        STA &C314        ;; Set CURR to &000002 - '$'
@@ -1333,9 +1334,9 @@ CPU 1
        STA &C262
        LDA #&0D
        STA &C263
-       LDA #&D3
+       LDA #<L94D3
        STA &B6
-       LDA #&94
+       LDA #>L94D3
        STA &B7
        LDA #&02
        STA &C2C0
@@ -1436,8 +1437,8 @@ CPU 1
        STA &C317
        LDA #&FF
        STA &C22F
-       LDX #&31
-       LDY #&88
+       LDX #<L8831
+       LDY #>L8831
        JSR L82AE        ;; Load FSM
 .L89EF LDA &C22E
        CMP #&FF
@@ -2203,8 +2204,8 @@ CPU 1
        JSR L9065        ;; Calculate FSM checksums
        STX &C0FF        ;; Store sector 0 checksum
        STA &C1FF        ;; Store sector 1 checksum
-       LDX #&7A         ;; Point to control block
-       LDY #&90
+       LDX #<L907A     ;; Point to control block
+       LDY #>L907A
        JSR L82AE        ;; Save FSM
        LDA #&10
        TRB &CD          ;; Flag FSM loaded
@@ -2300,7 +2301,7 @@ CPU 1
        RTS
 ;; 
 ;; Control block to save FSM
-       EQUB &01
+.L907A EQUB &01
        EQUB &00
        EQUB &C0
        EQUB &FF
@@ -2696,9 +2697,9 @@ CPU 1
        ROL A
        ADC #&30
        JSR LA03C
-       LDA #&68
+       LDA #<L9A68
        STA &B6
-       LDA #&9A
+       LDA #>L9A68
        STA &B7
        LDX #&0D
        JSR L928F
@@ -2711,7 +2712,7 @@ CPU 1
        LDX &C1FD
        LDA L9426,X
        STA &B6
-       LDA #&94
+       LDA #>L9426
        STA &B7
        LDX #&04
        JSR L928F
@@ -2777,11 +2778,11 @@ CPU 1
 .L9420 JSR LA03A
 .L9423 JMP L89D8
 ;; 
-.L9426 EQUS "*.26"
-       EQUS "Off "
-       EQUS "Load"
-       EQUS "Run "
-       EQUS "Exec"
+.L9426 EQUB <L942A, <L942E, <L9432, <L9436
+.L942A EQUS "Off "
+.L942E EQUS "Load"
+.L9432 EQUS "Run "
+.L9436 EQUS "Exec"
 ;; 
 ;; FSC 9 - *EX
 ;; =============
@@ -2864,7 +2865,7 @@ CPU 1
 ;; 
 ;; Fake entry for '$'
 ;; ==================
-       EQUB &A4
+.L94D3 EQUB &A4
        EQUB &0D
        EQUB &8D
        EQUB &8D
@@ -3351,9 +3352,9 @@ CPU 1
        STA &C252
        LDA #&CD
        STA &C1
-       LDA #&41
+       LDA #<L9941
        STA &B4
-       LDA #&99
+       LDA #>L9941
        STA &B5
 .L98CE JSR L9486
        LDY #&02
@@ -3389,9 +3390,9 @@ CPU 1
        BMI L98CE
 .L9913 LDA &C0
        BEQ L993D
-       LDA #&40
+       LDA #<L9940
        STA &B4
-       LDA #&99
+       LDA #>L9940
        STA &B5
        JSR L9486
        LDY #&00
@@ -3411,7 +3412,8 @@ CPU 1
 ;; 
 .L993D JMP L89D8
 ;; 
-       EQUS "^", 13
+.L9940 EQUS "^"
+.L9941 EQUB 13
 ;; 
 ;; *ACCESS
 ;; =======
@@ -3567,7 +3569,7 @@ CPU 1
        BRK
        BRK
        EQUB &02         ;; lib=2
-       BRK
+.L9A68 BRK
        BRK
        BRK
        EQUB &02         ;; back=2
@@ -3610,24 +3612,23 @@ CPU 1
 .L9A88 LDA #&FD
        JSR L84C4        ;; Read BREAK type
        TXA
-.L9A8E RTS
+       RTS
 ;; 
 ;; Boot command offset bytes
 ;; -------------------------
-       EQUB &92         ;; Option 1 at L9A92
-       EQUB &94         ;; Option 2 at L9A94
-       EQUB &9C         ;; Option 3 at L9A9C
+.L9A8F EQUB <L9A92      ;; Option 1 at L9A92
+       EQUB <L9A94      ;; Option 2 at L9A94
+       EQUB <L9A9C      ;; Option 3 at L9A9C
 ;; 
 ;; Boot commands
 ;; -------------
 .L9A92 EQUS "L."        ;; Start of *Load option
+;;
 .L9A94 EQUS "$.!BOOT"   ;; End of *Load and *Run option
-;; 9A98 4F 4F 54    OOT
        EQUB &0D
+;;
 .L9A9C EQUS "E.-ADFS-$.!BOOT"
                         ;; *Exec option
-      
-;; 9AA8 4F 4F 54    OOT
        EQUB &0D
 ;; 
 ;; 
@@ -3912,9 +3913,9 @@ CPU 1
        ORA &C31A
        ORA &C31B
        BNE L9C7A        ;; No, don't look for Library
-       LDA #&AE
+       LDA #<L9CAE
        STA &B4
-       LDA #&9C
+       LDA #>L9CAE
        STA &B5          ;; Point to ":0.LIB*"
        JSR L8FE8
        BNE L9C7A
@@ -3957,17 +3958,15 @@ CPU 1
        JSR LA1A1
 .L9C9B LDY &C1FD        ;; Get boot option
        BEQ L9CA8        ;; Zero, jump to finish
-       LDX L9A8E,Y      ;; Get
-       LDY #&9A
+       LDX L9A8F-1,Y    ;; Get
+       LDY #>L9A8F
        JSR &FFF7        ;; Do *Load/*Run/*Exec
 .L9CA8 LDX &F4          ;; Restore ROM number
        PLY              ;; Rebalance stack
        LDA #&00         ;; Claim the call
        RTS
 ;; 
-       EQUS ":0.LIB*"
-;; 9CB2 49 42 2A    IB*
-       EQUB &0D
+.L9CAE EQUS ":0.LIB*", &0D
 ;; 
 ;; 
 ;; Vector Table
@@ -4557,8 +4556,8 @@ CPU 1
        JSR LB210        ;; Do CLOSE#0
 .LA10E LDA #&60
        STA &C317        ;; Set drive to 3
-.LA113 LDX #&2A
-       LDY #&A1         ;; Point to control block
+.LA113 LDX #<LA12A
+       LDY #>LA12A      ;; Point to control block
        JSR L80A2        ;; Do command &1B - park heads
        LDA &C317        ;; Get current drive
        SEC
@@ -4569,7 +4568,7 @@ CPU 1
        STA &C317        ;; Restore current drive
        RTS
 ;; 
-       EQUB &00
+.LA12A EQUB &00
        EQUB &00         ;; ;; &FFFFC900
        EQUB &C9
        EQUB &FF
@@ -4636,12 +4635,12 @@ CPU 1
 .LA19E JSR LA135        ;; Scan drive number parameter
 .LA1A1 LDA &C26F        ;; Get drive
        STA &C317        ;; Set current drive
-       LDX #&DF
-       LDY #&A1
+       LDX #<LA1DF
+       LDY #>LA1DF
        JSR L80A2        ;; Do SCSI command &1B - Park
-       LDA #&EA
+       LDA #<(LA2EB-1)
        STA &B4
-       LDA #&A2
+       LDA #>(LA2EB-1)
        STA &B5          ;; Point to LA2EA
        JSR L9546        ;; Do something
 .LA1B9 LDA &C31F        ;; Get previous drive
@@ -4660,7 +4659,7 @@ CPU 1
        JSR LA189        ;; Set library name to "Unset"
 .LA1DE RTS
 ;; 
-       EQUB &00         ;; ;; Flag = &00
+.LA1DF EQUB &00         ;; ;; Flag = &00
        EQUB &00         ;; ;; &FFFFC900
        EQUB &C9
        EQUB &FF
@@ -4936,8 +4935,8 @@ CPU 1
        LDA #&40
        JSR LB213
        STA &C332
-       LDX #&9C         ;; Point to E.-ADFS-$.!BOOT
-       LDY #&9A
+       LDX #<L9A9C         ;; Point to E.-ADFS-$.!BOOT
+       LDY #>L9A9C
        JMP &FFF7
 ;; 
 .LA42A LDY #&0B
@@ -5477,8 +5476,8 @@ CPU 1
        DEY
        BPL LA82E
        JSR L82AA
-       LDX #&31
-       LDY #&88
+       LDX #<L8831
+       LDY #>L8831
        JMP L82AE
 ;; 
 .LA849 LDA #&7F
@@ -7047,8 +7046,8 @@ CPU 1
        JSR LB560
        EOR &C2C2
        BEQ LB545
-       LDX #&31
-       LDY #&88
+       LDX #<L8831
+       LDY #>L8831
        JSR L82AE
        BRA LB4E2
 ;; 
@@ -7093,8 +7092,8 @@ CPU 1
 .LB5B5 PLA
        CMP &C317
        BEQ LB5C2
-       LDX #&31
-       LDY #&88
+       LDX #<L8831
+       LDY #>L8831
        JSR L82AE
 .LB5C2 PLY
        PLX
