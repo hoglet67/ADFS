@@ -5404,9 +5404,9 @@ CPU 1
        INX
        DEY
        BPL LA7B0
-       LDA #&D3
+       LDA #<(LA7D4-1)
        STA &0101,X
-       LDA #&A7
+       LDA #>(LA7D4-1)
        STA &0102,X      ;; Force return address to LA7D4
        PLX
        PLY
