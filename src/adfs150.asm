@@ -8422,6 +8422,3 @@ CPU 1
        RTS              ;; Return with A=error, EQ=Ok
 ;; 
 .LBFFF EQUB &A9
-;; 
-;; Courier 8 point, landscape, 2 columns, gap 20mm, margins 10mm, tabs 18mm
-SAVE "ADFS150.rom", &8000, &C000
