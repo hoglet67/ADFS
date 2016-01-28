@@ -490,20 +490,15 @@ Do a disk access
 82D1 20 6B 83     k.  JSR &836B		Generate an error
 82D4 11          .    EQUB &11		ERR=17
 82D5 45 73 63 61 Esca EQUS "Escape"	REPORT="Escape"
-82D9 70 65       pe
+     70 65       pe
 82DA 00          .    EQUB &00
 
 82DC C9 04       É.   CMP #&04		Hard drive error &04 (Not ready)?
 82DE D0 14       Ð.   BNE &82F4		No, try other errors
-82E0 20 6B 83     k.  JSR &836B		Generate an error
-82E3 CD 44 72    ÍDr  CMP &7244		Error "Drive not ready"
-82E6 69 76       iv   ADC #&76
-82E8 65 20       e    ADC &20
-82EA 6E 6F 74    not  ROR &746F
-82ED 20 72 65     re  JSR &6572
-82F0 61 64       ad   ADC (&64,X)
-82F2 79 00       y.   ADC &C900,Y
-
+82E0 20 6B 83     k.  JSR &836B		Generate an error "Drive not ready"
+0000                  EQUB &CD  	ERR=205
+0000                  EQUS "Drive not ready"
+0000                  EQUB &00
 82F4 C9 40       .@   CMP #&40		Floppy drive error &10 (WRPROT)?
 82F6 F0 13       ð.   BEQ &830B		Jump to report "Disk protected"
 					All other results, give generic
@@ -511,23 +506,13 @@ Do a disk access
 82F8 20 D8 89     Ø.  JSR &89D8
 82FB AA          ª    TAX
 82FC 20 74 83     t.  JSR &8374
-82FF C7 44       ÇD   CPY &44		Error "Disk error"
-8301 69 73       is   ADC #&73
-8303 63          c    EQUB &63
-8304 20 65 72     er  JSR &7265
-8307 72 6F       ro   ADC (&6F)
-8309 72 00       r.   ADC (&00)
-
+0000                  EQUB &C7  	ERR=199
+0000                  EQUS "Disc error"
+0000                  EQUB &00
 830B 20 4E 83     N.  JSR &834E		Generate an error
-830E C9 44       ÉD   CMP #&44		Error "Disc protected"
-8310 69 73       is   ADC #&73
-8312 63          c    EQUB &63
-8313 20 70 72     pr  JSR &7270
-8316 6F 74 65    ote  BBR 6,&74,&837E
-8319 63          c    EQUB &63
-831A 74 65       te   STZ &65,X
-831C 64 00       d.   STZ &00
-
+0000                  EQUB &C9  	ERR=201
+0000                  EQUS "Disc protected"
+0000                  EQUB &00
 831E 20 24 83     $.  JSR &8324
 8321 D0 9A       Ð.   BNE &82BD
 8323 60          `    RTS
@@ -683,14 +668,10 @@ Wait until SCSI ready to respond
 843A 20 9A 84     ..  JSR &849A
 843D 4C 00 01    L..  JMP &0100
 
-8440 3A          :    DEC A
-8441 20 74 61     ta  JSR &6174
-8444 20 20 6C      l  JSR &6C20
-8447 65 6E       en   ADC &6E
-8449 6E 61 68    nah  ROR &6861
-844C 63          c    EQUB &63
-844D 20 6E 6F     no  JSR &6F6E
-8450 20 48 4A     HJ  JSR &4A48
+8440                  EQUS ": ta "
+8445                  EQUS " lennahc no "
+8451 48          H    PHA
+8452 4A          J    LSR A
 8453 4A          J    LSR A
 8454 4A          J    LSR A
 8455 4A          J    LSR A
@@ -753,9 +734,9 @@ Wait until SCSI ready to respond
 84BC 60          `    RTS
 
 84BD 45 2E       E.   EQUS "E."		Abbreviation of 'Exec'
-84BF 0D          .    EQUB 13
+84BF 0D          .    EQUB &0D
 84C0 53 50 2E    SP.  EQUS "SP."	Abbreviation of 'Spool'
-84C3 0D          .    EQUB 13
+84C3 0D          .    EQUB &0D
 
 OSBYTE READ
 -----------
@@ -772,10 +753,8 @@ Close Spool or Exec if ADFS channel
 84D3 A0 84        .   LDY #&84		Point to *Spool or *Exec
 84D5 4C F7 FF    L÷.  JMP &FFF7		Jump to close via MOS
 
-84D8 0D 53 45    .SE  ORA &4553
-84DB 59 00 48    Y.H  EOR &4800,Y
-84DE 75 67       ug   ADC &67,X
-84E0 6F          o    BBR 6,&AD,&851A
+84D8                  EQUS &0D, "SEY"
+84DC                  EQUS &00, "Hugo"
 
 84E1 AD 37 C2    ­7Â  LDA &C237
 84E4 0D 38 C2    .8Â  ORA &C238
@@ -936,10 +915,9 @@ Close Spool or Exec if ADFS channel
 85EE C9 F6       Éö   CMP #&F6
 85F0 90 0D       ..   BCC &85FF
 85F2 20 4E 83     N.  JSR &834E
-85F5 99 4D 61    .Ma  STA &614D,Y
-85F8 70 20       p    BVS &861A
-85FA 66 75       fu   ROR &75
-85FC 6C 6C 00    ll.  JMP (&006C)
+0000                  EQUB &99   	ERR=153
+0000                  EQUS "Map full"
+0000                  EQUB &00
 
 85FF AE FE C1    ®þÁ  LDX &C1FE
 8602 E4 B2       ä²   CPX &B2
@@ -1005,24 +983,14 @@ Close Spool or Exec if ADFS channel
 867B 10 F6       .ö   BPL &8673
 867D B0 0E       °.   BCS &868D
 867F 20 4E 83     N.  JSR &834E
-8682 C6 44       ÆD   DEC &44
-8684 69 73       is   ADC #&73
-8686 63          c    EQUB &63
-8687 20 66 75     fu  JSR &7566
-868A 6C 6C 00    ll.  JMP (&006C)
+0000                  EQUB &C6   	ERR=198
+0000                  EQUS "Disc full"
+0000                  EQUB &00
 
 868D 20 4E 83     N.  JSR &834E
-8690 98          .    TYA
-8691 43          C    EQUB &43
-8692 6F 6D 70    omp  BBR 6,&6D,&8705
-8695 61 63       ac   ADC (&63,X)
-8697 74 69       ti   STZ &69,X
-8699 6F 6E 20    on   BBR 6,&6E,&86BC
-869C 72 65       re   ADC (&65)
-869E 71 75       qu   ADC (&75),Y
-86A0 69 72       ir   ADC #&72
-86A2 65 64       ed   ADC &64
-86A4 00          .    BRK
+0000                  EQUB &98   	ERR=152
+0000                  EQUS "Compaction required"
+0000                  EQUB &00
 86A5 A0 02        .   LDY #&02
 86A7 CA          Ê    DEX
 86A8 BD 00 C0    ½.À  LDA &C000,X
@@ -1127,11 +1095,9 @@ Close Spool or Exec if ADFS channel
 875E 10 F8       .ø   BPL &8758
 
 8760 20 6B 83     k.  JSR &836B
-8763 CC 42 61    ÌBa  CPY &6142
-8766 64 20       d    STZ &20
-8768 6E 61 6D    nam  ROR &6D61
-876B 65 00       e.   ADC &00
-
+0000                  EQUB &CC  	ERR=204
+0000                  EQUS "Bad name"
+0000                  EQUB &00
 876D A0 09        .   LDY #&09
 876F B1 B6       ±¶   LDA (&B6),Y
 8771 29 7F       ).   AND #&7F
@@ -1239,20 +1205,31 @@ Close Spool or Exec if ADFS channel
 882E C9 0F       É.   CMP #&0F
 8830 60          `    RTS
 
-8831 01 00       ..   ORA (&00,X)	Control block to load FSM
-8833 C0 FF       À.   CPY #&FF
-8835 FF 08 00    ...  BBS 7,&08,&8838
-8838 00          .    BRK
-8839 00          .    BRK
-883A 02          .    EQUB &02
-883B 00          .    BRK
+Control block to load FSM
+8831                  EQUB &01
+8832                  EQUB &00
+8833                  EQUB &C0
+8834                  EQUB &FF
+8835                  EQUB &FF
+8836                  EQUB &08
+8837                  EQUB &00
+8838                  EQUB &00
+8839                  EQUB &00
+883A                  EQUB &02
+883B                  EQUB &00
 
-883C 01 00       ..   ORA (&00,X)	Control block to load '$'
-883E C4 FF       Ä.   CPY &FF
-8840 FF 08 00    ...  BBS 7,&08,&8843
-8843 00          .    BRK
-8844 02          .    EQUB &02
-8845 05 00       ..   ORA &00
+Control block to load '$'
+883C                  EQUB &01
+883D                  EQUB &00
+883E                  EQUB &C4
+883F                  EQUB &FF
+8840                  EQUB &FF
+8841                  EQUB &08
+8842                  EQUB &00
+8843                  EQUB &00
+8844                  EQUB &02
+8845                  EQUB &05
+8846                  EQUB &00
 
 Check drive character
 8847 C9 30       É0   CMP #&30
@@ -1415,11 +1392,9 @@ Check drive character
 8983 91 B6       .¶   STA (&B6),Y
 8985 20 91 8F     ..  JSR &8F91
 8988 20 6B 83     k.  JSR &836B
-898B B0 42       °B   BCS &89CF
-898D 61 64       ad   ADC (&64,X)
-898F 20 72 65     re  JSR &6572
-8992 6E 61 6D    nam  ROR &6D61
-8995 65 00       e.   ADC &00
+0000                  EQUB &B0  	ERR=176
+0000                  EQUS "Bad rename"
+0000                  EQUB &00
 8997 AD A2 C2    ­¢Â  LDA &C2A2
 899A 38          8    SEC
 899B 65 B4       e´   ADC &B4
@@ -1726,11 +1701,9 @@ Get bytes from a partial sector from a hard drive
 8BDE C9 40       É@   CMP #&40
 8BE0 F0 F9       ðù   BEQ &8BDB
 8BE2 20 6B 83     k.  JSR &836B
-8BE5 D6 4E       ÖN   DEC &4E,X
-8BE7 6F 74 20    ot   BBR 6,&74,&8C0A
-8BEA 66 6F       fo   ROR &6F
-8BEC 75 6E       un   ADC &6E,X
-8BEE 64 00       d.   STZ &00
+0000                  EQUB &D6  	ERR=210
+0000                  EQUS "Not found"
+0000                  EQUB &00
 
 Search for object, give error if 'E' set
 ========================================
@@ -1740,15 +1713,9 @@ Search for object, give error if 'E' set
 8BF7 B1 B6       ±¶   LDA (&B6),Y	Check 'E' bit
 8BF9 10 D5       .Õ   BPL &8BD0		Not 'E', return EQ for found
 8BFB 20 6B 83     k.  JSR &836B		Error 'Access violation'
-8BFE BD 41 63    ½Ac  LDA &6341,X
-8C01 63          c    EQUB &63
-8C02 65 73       es   ADC &73
-8C04 73          s    EQUB &73
-8C05 20 76 69     vi  JSR &6976
-8C08 6F 6C 61    ola  BBR 6,&6C,&8C6C
-8C0B 74 69       ti   STZ &69,X
-8C0D 6F 6E 00    on.  BBR 6,&6E,&8C10
-
+0000                  EQUB &BD  	ERR=189
+0000                  EQUS "Access violation"
+0000                  EQUB &00
 OSFILE &FF - LOAD
 =================
 8C10 20 BE 8B     ¾.  JSR &8BBE
@@ -1904,12 +1871,9 @@ OSFILE &05 - Read Info
 8D1D B1 B6       ±¶   LDA (&B6),Y
 8D1F 10 0B       ..   BPL &8D2C
 8D21 20 6B 83     k.  JSR &836B
-8D24 C3          Ã    EQUB &C3
-8D25 4C 6F 63    Loc  JMP &636F
-
-8D28 6B          k    ROR A
-8D29 65 64       ed   ADC &64
-8D2B 00          .    BRK
+0000                  EQUB &C3  	ERR=195
+0000                  EQUS "Locked"
+0000                  EQUB &00
 8D2C A2 09       ¢.   LDX #&09
 8D2E BD AC C3    ½¬Ã  LDA &C3AC,X
 8D31 F0 41       ðA   BEQ &8D74
@@ -1931,16 +1895,10 @@ OSFILE &05 - Read Info
 8D59 DD F2 C3    ÝòÃ  CMP &C3F2,X
 8D5C D0 16       Ð.   BNE &8D74
 8D5E 20 6B 83     k.  JSR &836B
-8D61 C2          Â    EQUB &C2
-8D62 43          C    EQUB &43
-8D63 61 6E       an   ADC (&6E,X)
-8D65 27 74       't   BIT &74
-8D67 20 2D 20     -   JSR &202D
-8D6A 46 69       Fi   LSR &69
-8D6C 6C 65 20    le   JMP (&2065)
-
-8D6F 6F 70 65    ope  BBR 6,&70,&8DD7
-8D72 6E 00 CA    n.Ê  ROR &CA00
+0000                  EQUB &C2  	ERR=194
+0000                  EQUS "Can't - File open"
+0000                  EQUB &00
+8D74 CA               DEX
 8D75 10 B7       .·   BPL &8D2E
 8D77 E8          è    INX
 8D78 60          `    RTS
@@ -2006,16 +1964,12 @@ OSFILE &05 - Read Info
 8DE6 4C 60 87    L`.  JMP &8760
 
 8DE9 20 6B 83     k.  JSR &836B
-8DEC FD 57 69    ýWi  SBC &6957,X
-8DEF 6C 64 20    ld   JMP (&2064)
+0000                  EQUB &Fd  	ERR=194
+0000                  EQUS "Wild cards"
+0000                  EQUB &00
 
-8DF2 63          c    EQUB &63
-8DF3 61 72       ar   ADC (&72,X)
-8DF5 64 73       ds   STZ &73
-8DF7 00          .    BRK
-8DF8 7F 5E 40    .^@  BBR 7,&5E,&8E3B
-8DFB 3A          :    DEC A
-8DFC 24 26       $&   BIT &26
+8DF8 7F 5E 40    .^@  EQUS &7F, "^@:$&"
+
 8DFE 20 F4 8C     ô.  JSR &8CF4
 8E01 D0 21       Ð!   BNE &8E24
 8E03 A2 02       ¢.   LDX #&02
@@ -2040,11 +1994,9 @@ OSFILE &05 - Read Info
 8E24 AD B1 C8    ­±È  LDA &C8B1
 8E27 F0 0D       ð.   BEQ &8E36
 8E29 20 6B 83     k.  JSR &836B
-8E2C B3          ³    EQUB &B3
-8E2D 44          D    EQUB &44
-8E2E 69 72       ir   ADC #&72
-8E30 20 66 75     fu  JSR &7566
-8E33 6C 6C 00    ll.  JMP (&006C)
+0000                  EQUB &B3  	ERR=179
+0000                  EQUS "Dir full"
+0000                  EQUB &00
 
 8E36 A5 B4       ¥´   LDA &B4
 8E38 8D 27 C2    .'Â  STA &C227
@@ -2274,11 +2226,9 @@ Check Free Space Map consistancy
 8FFE EC FF C0    ì.À  CPX &C0FF		Does sector 0 sum match?
 9001 F0 EF       ðï   BEQ &8FF2		Yes, exit
 9003 20 4E 83     N.  JSR &834E		Generate error
-9006 A9 42       ©B   LDA #&42		"Bad FS map"
-9008 61 64       ad   ADC (&64,X)
-900A 20 46 53     FS  JSR &5346
-900D 20 6D 61     ma  JSR &616D
-9010 70 00       p.   BVS &9012
+0000                  EQUB &A9  	ERR=169
+0000                  EQUS "Bad FS map"
+0000                  EQUB &00
 
 Check Free Space Map doesn't have overlapping entries
 -----------------------------------------------------
@@ -2347,13 +2297,18 @@ Add up FSM
 9077 D0 FA       Ðú   BNE &9073		Loop for all bytes
 9079 60          `    RTS
 
-907A 01 00       ..   ORA (&00,X)	Control block to save FSM
-907C C0 FF       À.   CPY #&FF
-907E FF 0A 00    ...  BBS 7,&0A,&9081
-9081 00          .    BRK
-9082 00          .    BRK
-9083 02          .    EQUB &02
-9084 00          .    BRK
+Control block to save FSM
+907A                  EQUB &01
+907B                  EQUB &00
+907C                  EQUB &C0
+907D                  EQUB &FF
+907E                  EQUB &FF
+907F                  EQUB &0A
+9180                  EQUB &00
+9081                  EQUB &00
+9082                  EQUB &00
+9083                  EQUB &02
+9084                  EQUB &00
 
 OSFILE &01-&03 - Write Info
 ===========================
@@ -2475,15 +2430,11 @@ OSFILE &04 - Write Attributes
 9162 28          (    PLP
 9163 F0 12       ð.   BEQ &9177
 9165 20 6B 83     k.  JSR &836B
-9168 B4 44       ´D   LDY &44,X
-916A 69 72       ir   ADC #&72
-916C 20 6E 6F     no  JSR &6F6E
-916F 74 20       t    STZ &20,X
-9171 65 6D       em   ADC &6D
-9173 70 74       pt   BVS &91E9
-9175 79 00 A0    y.   ADC &A000,Y
-9178 12 A2       .¢   ORA (&A2)
-917A 02          .    EQUB &02
+0000                  EQUB &B4  	ERR=180
+0000                  EQUS "Dir not empty"
+0000                  EQUB &00
+9177 A0 12            LDY #&12
+9179 A2 02            LDX #&02
 917B B1 B6       ±¶   LDA (&B6),Y
 917D C9 01       É.   CMP #&01
 917F C8          È    INY
@@ -2514,17 +2465,9 @@ OSFILE &04 - Write Attributes
 91B3 CA          Ê    DEX
 91B4 10 F5       .õ   BPL &91AB
 91B6 20 6B 83     k.  JSR &836B
-91B9 96 43       .C   STX &43,X
-91BB 61 6E       an   ADC (&6E,X)
-91BD 27 74       't   BIT &74
-91BF 20 64 65     de  JSR &6564
-91C2 6C 65 74    let  JMP (&7465)
-
-91C5 65 20       e    ADC &20
-91C7 43          C    EQUB &43
-91C8 53          S    EQUB &53
-91C9 44          D    EQUB &44
-91CA 00          .    BRK
+0000                  EQUB &96  	ERR=150
+0000                  EQUS "Can't delete CSD"
+0000                  EQUB &00
 91CB AD 17 C3    ­.Ã  LDA &C317
 91CE CD 1B C3    Í.Ã  CMP &C31B
 91D1 D0 26       Ð&   BNE &91F9
@@ -2535,18 +2478,10 @@ OSFILE &04 - Write Attributes
 91DD CA          Ê    DEX
 91DE 10 F5       .õ   BPL &91D5
 91E0 20 6B 83     k.  JSR &836B
-91E3 97 43       .C   STY &43,X
-91E5 61 6E       an   ADC (&6E,X)
-91E7 27 74       't   BIT &74
-91E9 20 64 65     de  JSR &6564
-91EC 6C 65 74    let  JMP (&7465)
+0000                  EQUB &97  	ERR=151
+0000                  EQUS "Can't delete Library"
+0000                  EQUB &00
 
-91EF 65 20       e    ADC &20
-91F1 4C 69 62    Lib  JMP &6269
-
-91F4 72 61       ra   ADC (&61)
-91F6 72 79       ry   ADC (&79)
-91F8 00          .    BRK
 91F9 AD 17 C3    ­.Ã  LDA &C317
 91FC CD 1F C3    Í.Ã  CMP &C31F
 91FF D0 1A       Ð.   BNE &921B
@@ -2631,7 +2566,7 @@ OSFILE Dispatch Block
 9281 87 8F       ..   EQUW &8F88-1 ; &07 - Create
 
 9283 AA          ª    TAX
-9284 A9 9F       ©.   LDA #&9F
+9284 A9 9F       ©.   LDA #>&9FB1
 9286 85 B7       .·   STA &B7
 9288 BD 95 9E    ½..  LDA &9E95,X
 928B 85 B6       .¶   STA &B6
@@ -2747,16 +2682,11 @@ Access bits
 933C A2 13       ¢.   LDX #&13
 933E 20 8F 92     ..  JSR &928F
 9341 20 A8 92     ¨.  JSR &92A8
-9344 20 A8 AD     ¨­  JSR &ADA8
-9347 FA          ú    PLX
-9348 C8          È    INY
+9344 20               EQUB &20, &A8
+9346 AD FA C8         LDA &C8FA
 9349 20 22 93     ".  JSR &9322
 934C 20 A8 92     ¨.  JSR &92A8
-934F 29 0D       ).   AND #&0D
-9351 44          D    EQUB &44
-9352 72 69       ri   ADC (&69)
-9354 76 65       ve   ROR &65,X
-9356 BA          º    TSX
+934F 29 0D       ).   EQUS ")",&0D,"Drive",&BA
 9357 AD 17 C3    ­.Ã  LDA &C317
 935A 0A          .    ASL A
 935B 2A          *    ROL A
@@ -2771,49 +2701,41 @@ Access bits
 936B A2 0D       ¢.   LDX #&0D
 936D 20 8F 92     ..  JSR &928F
 9370 20 A8 92     ¨.  JSR &92A8
-9373 4F 70 74    Opt  BBR 4,&70,&93EA
-9376 69 6F       io   ADC #&6F
-9378 6E A0 AD    n ­  ROR &ADA0
-937B FD C1 20    ýÁ   SBC &20C1,X
-937E 22          "    EQUB &22
-937F 93          .    EQUB &93
+9373 4F 70 74    Opt  EQUS "Option", &A0
+937A AD FD C1         LDA &C1FD
+937D 20 22 93         JSR &9322
 9380 20 A8 92     ¨.  JSR &92A8
-9383 20 A8 AE     ¨®  JSR &AEA8
-9386 FD C1 BD    ýÁ½  SBC &BDC1,X
-9389 26 94       &.   ROL &94
+9383 20 A8            EQUB &20, &A8
+9385 AE FD C1         LDX &C1FD
+9388 BD 26 94    &.   LDA &9426,X
 938B 85 B6       .¶   STA &B6
 938D A9 94       ©.   LDA #&94
 938F 85 B7       .·   STA &B7
 9391 A2 04       ¢.   LDX #&04
 9393 20 8F 92     ..  JSR &928F
 9396 20 A8 92     ¨.  JSR &92A8
-9399 29 0D       ).   AND #&0D
-939B 44          D    EQUB &44
-939C 69 72       ir   ADC #&72
-939E 2E A0 A9    . ©  ROL &A9A0
-93A1 00          .    BRK
+9399 29 0D       ).   EQUS ")",&0D,"Dir.",&A0
+93A0 A9 00          . LDA #&00
 93A2 85 B6       .¶   STA &B6
 93A4 A9 C3       ©Ã   LDA #&C3
 93A6 85 B7       .·   STA &B7
 93A8 A2 0A       ¢.   LDX #&0A
 93AA 20 8F 92     ..  JSR &928F
 93AD 20 A8 92     ¨.  JSR &92A8
-93B0 20 20 20         JSR &2020
-93B3 20 20 4C      L  JSR &4C20
-93B6 69 62       ib   ADC #&62
-93B8 2E A0 A9    . ©  ROL &A9A0
-93BB 0A          .    ASL A
+93B0 20 20 20         EQUS "     Lib.",&A0
+93BA A9 0A        .   LDA #&0A
 93BC 85 B6       .¶   STA &B6
 93BE A9 C3       ©Ã   LDA #&C3
 93C0 85 B7       .·   STA &B7
 93C2 A2 0A       ¢.   LDX #&0A
 93C4 20 8F 92     ..  JSR &928F
 93C7 20 A8 92     ¨.  JSR &92A8
-93CA 0D 8D A9    ..©  ORA &A98D
-93CD 05 85       ..   ORA &85
-93CF B6 A9       ¶©   LDX &A9,X
-93D1 C4 85       Ä.   CPY &85
-93D3 B7 60       ·`   LDY &60,X
+93CA 0D 8D        ..  EQUB &0D,&8D
+93CC A9 05            LDA #&05
+93CE 85 B6            STA &B6
+93D0 A9 C4            LDA #&C4
+93D2 85 B7            STA &B7
+93D4 60               RTS
 
 FSC 5 - *CAT
 ============
@@ -2853,15 +2775,11 @@ FSC 5 - *CAT
 9420 20 3A A0     :   JSR &A03A
 9423 4C D8 89    LØ.  JMP &89D8
 
-9426 2A          *    ROL A
-9427 2E 32 36    .26  ROL &3632
-942A 4F 66 66    Off  BBR 4,&66,&9493
-942D 20 4C 6F     Lo  JSR &6F4C
-9430 61 64       ad   ADC (&64,X)
-9432 52 75       Ru   EOR (&75)
-9434 6E 20 45    n E  ROR &4520
-9437 78          x    SEI
-9438 65 63       ec   ADC &63
+9426 2A          *    EQUS "*.26"
+0000                  EQUS "Off "
+0000                  EQUS "Load"
+0000                  EQUS "Run "
+0000                  EQUS "Exec"
 
 FSC 9 - *EX
 =============
@@ -2944,25 +2862,33 @@ FSC 9 - *EX
 
 Fake entry for '$'
 ==================
-94D3 A4 0D       ¤.   LDY &0D
-94D5 8D 8D 0D    ...  STA &0D8D
-94D8 0D 0D 0D    ...  ORA &0D0D
-94DB 0D 0D 00    ...  ORA &000D
-94DE 00          .    BRK
-94DF 00          .    BRK
-94E0 00          .    BRK
-94E1 00          .    BRK
-94E2 00          .    BRK
-94E3 00          .    BRK
-94E4 00          .    BRK
-94E5 00          .    BRK
-94E6 05 00       ..   ORA &00
-94E8 00          .    BRK
-94E9 02          .    EQUB &02
-94EA 00          .    BRK
-94EB 00          .    BRK
-94EC 00          .    BRK
-94ED 00          .    BRK
+94D3                  EQUB &A4
+94D4                  EQUB &0D
+94D5                  EQUB &8D
+94D6                  EQUB &8D
+94D7                  EQUB &0D
+94D8                  EQUB &0D
+94D9                  EQUB &0D
+94DA                  EQUB &0D
+94DB                  EQUB &0D
+94DC                  EQUB &0D
+94DD                  EQUB &00
+94DE                  EQUB &00
+94DF                  EQUB &00
+94E0                  EQUB &00
+94E1                  EQUB &00
+94E2                  EQUB &00
+94E3                  EQUB &00
+94E4                  EQUB &00
+94E5                  EQUB &00
+94E6                  EQUB &05
+94E7                  EQUB &00
+94E8                  EQUB &00
+94E9                  EQUB &02
+94EA                  EQUB &00
+94EB                  EQUB &00
+94EC                  EQUB &00
+94ED                  EQUB &00
 
 FSC 10 - *INFO
 ==============
@@ -3058,15 +2984,9 @@ FSC 10 - *INFO
 95A6 0D 39 C2    .9Â  ORA &C239
 95A9 F0 13       ð.   BEQ &95BE
 95AB 20 6B 83     k.  JSR &836B
-95AE C4 41       ÄA   CPY &41
-95B0 6C 72 65    lre  JMP (&6572)
-
-95B3 61 64       ad   ADC (&64,X)
-95B5 79 20 65    y e  ADC &6520,Y
-95B8 78          x    SEI
-95B9 69 73       is   ADC #&73
-95BB 74 73       ts   STZ &73,X
-95BD 00          .    BRK
+0000                  EQUB &C4  	ERR=196
+0000                  EQUS "Already exists"
+0000                  EQUB &00
 95BE B1 B4       ±´   LDA (&B4),Y
 95C0 29 7F       ).   AND #&7F
 95C2 C9 22       É"   CMP #&22
@@ -3126,20 +3046,25 @@ FSC 10 - *INFO
 9633 20 42 8A     B.  JSR &8A42
 9636 4C 8B 8F    L..  JMP &8F8B
 
-9639 00          .    BRK
-963A 00          .    BRK
-963B 00          .    BRK
-963C 00          .    BRK
-963D 00          .    BRK
-963E 00          .    BRK
-963F 00          .    BRK
-9640 00          .    BRK
-9641 00          .    BRK
-9642 C9 FF       É.   CMP #&FF
-9644 FF 00 CE    ..Î  BBS 7,&00,&9615
-9647 FF FF AD    ..­  BBS 7,&FF,&95F7
-964A 2F C2 CD    /ÂÍ  BBR 2,&C2,&961A
-964D 17 C3       .Ã   TRB &C3
+9639 00               EQUB &00
+963A 00               EQUB &00
+963B 00               EQUB &00
+963C 00               EQUB &00
+963D 00               EQUB &00
+963E 00               EQUB &00
+963F 00               EQUB &00
+9640 00               EQUB &00
+9641 00               EQUB &00
+9642 C9               EQUB &C9
+9643 FF               EQUB &FF
+9644 FF               EQUB &FF
+9645 00               EQUB &00
+9646 CE               EQUB &CE
+9647 FF               EQUB &FF
+9648 FF               EQUB &FF
+
+9649 AD 2F C2         LDA &C22F
+964C CD 17 C3         CMP &C317
 964F F0 03       ð.   BEQ &9654
 9651 1A          .    INC A
 9652 D0 18       Ð.   BNE &966C
@@ -3484,9 +3409,7 @@ FSC 10 - *INFO
 
 993D 4C D8 89    LØ.  JMP &89D8
 
-9940 5E 0D       ^.   EQUS "^"+CHR$13
-
-9940 5E 0D 20    ^.   LSR &200D,X
+9940 5E 0D       ^.   EQUS "^", 13
 
 *ACCESS
 =======
@@ -3574,11 +3497,9 @@ FSC 10 - *INFO
 
 99DA 20 3A A0     :   JSR &A03A
 99DD 20 6B 83     k.  JSR &836B
-99E0 92 41       .A   STA (&41)
-99E2 62          b    EQUB &62
-99E3 6F 72 74    ort  BBR 6,&72,&9A5A
-99E6 65 64       ed   ADC &64
-99E8 00          .    BRK
+0000                  EQUB &92  	ERR=146
+0000                  EQUS "Aborted"
+0000                  EQUB &00
 99E9 A5 B4       ¥´   LDA &B4
 99EB 48          H    PHA
 99EC A5 B5       ¥µ   LDA &B5
@@ -3593,12 +3514,8 @@ FSC 10 - *INFO
 99FD 68          h    PLA
 99FE 85 B4       .´   STA &B4
 9A00 20 A8 92     ¨.  JSR &92A8
-9A03 44          D    EQUB &44
-9A04 65 73       es   ADC &73
-9A06 74 72       tr   STZ &72,X
-9A08 6F 79 20    oy   BBR 6,&79,&9A2B
-9A0B 3F A0 A2    ? ¢  BBR 3,&A0,&99B0
-9A0E 03          .    EQUB &03
+9A03 44          D    EQUS "Destroy ?", &A0
+9A0D A2 03          . LDX #&03
 9A0F 20 E0 FF     à.  JSR &FFE0
 9A12 C9 20       É    CMP #&20
 9A14 90 03       ..   BCC &9A19
@@ -3696,7 +3613,7 @@ b2-b0 FDrive
 Boot command offset bytes
 -------------------------
 9A8F 92          .    EQUB &92		Option 1 at &9A92
-9A90 94          .    EQUB &92		Option 2 at &9A94
+9A90 94          .    EQUB &94		Option 2 at &9A94
 9A91 9C          .    EQUB &9C		Option 3 at &9A9C
 
 Boot commands
@@ -3709,7 +3626,7 @@ Boot commands
 9AA0 44 46 53 2D DFS-			*Exec option
 9AA4 24 2E 21 42 $.!B
 9AA8 4F 4F 54    OOT
-9AAB 0D          .    EQUB 13
+9AAB 0D          .    EQUB &0D
 
 
 SERVICE CALL HANDLERS
@@ -3722,43 +3639,49 @@ popped from the stack
 
 Low service call routines address-1 low bytes
 ---------------------------------------------
-9AAC D4          Ô    EQUB &D4			Serv0 - &9AD5 - Null
-9AAD D4          Ô    EQUB &D4			Serv1 - &9AD5 - Null
-9AAE FE          þ    EQUB &FE			Serv2 - &9AFF - Low w/s
-9AAF 53          S    EQUB &53			Serv3 - &9B54 - Boot FS
-9AB0 22          "    EQUB &22			Serv4 - &9D23 - Commands
-9AB1 88          .    EQUB &88			Serv5 - &AB89 - Interrupt
-9AB2 D4          Ô    EQUB &D4			Serv6 - &9AD5 - Null
-9AB3 D4          Ô    EQUB &D4			Serv7 - &9AD5 - Null
-9AB4 5D          ]    EQUB &5D			Serv8 - &9D5E - Osword
-9AB5 0C          .    EQUB &0C			Serv9 - &9E0D - Help
+9AAC D4          Ô    EQUB <(&9AD5-1)			;; Serv0 - &9AD5 - Null
+9AAD D4          Ô    EQUB <(&9AD5-1)			;; Serv1 - &9AD5 - Null
+9AAE FE          þ    EQUB <(&9AFF-1)			;; Serv2 - &9AFF - Low w/s
+9AAF 53          S    EQUB <(&9B54-1)			;; Serv3 - &9B54 - Boot FS
+9AB0 22          "    EQUB <(&9D23-1)			;; Serv4 - &9D23 - Commands
+9AB1 88          .    EQUB <(&AB89-1)			;; Serv5 - &AB89 - Interrupt
+9AB2 D4          Ô    EQUB <(&9AD5-1)			;; Serv6 - &9AD5 - Null
+9AB3 D4          Ô    EQUB <(&9AD5-1)			;; Serv7 - &9AD5 - Null
+9AB4 5D          ]    EQUB <(&9D5E-1)			;; Serv8 - &9D5E - Osword
+9AB5 0C          .    EQUB <(&9E0D-1)			;; Serv9 - &9E0D - Help
 
 Low service call routines address-1 high bytes
 ----------------------------------------------
-9AB6 9A          .    EQUB &9A
-9AB7 9A          .    TXS
-9AB8 9A          .    TXS
-9AB9 9B          .    EQUB &9B
-9ABA 9D AB 9A    .«.  STA &9AAB,X
-9ABD 9A          .    TXS
-9ABE 9D 9E       ..   STA &D89E,X
+9AB6 9A               EQUB >(&9AD5-1)
+9AB7 9A               EQUB >(&9AD5-1)
+9AB8 9A               EQUB >(&9AFF-1)
+9AB9 9B               EQUB >(&9B54-1)
+9ABA 9D               EQUB >(&9D23-1)
+9ABB AB               EQUB >(&AB89-1)
+9ABC 9A               EQUB >(&9AD5-1)
+9ABD 9A               EQUB >(&9AD5-1)
+9ABE 9D               EQUB >(&9D5E-1)
+9ABF 9E               EQUB >(&9E0D-1)
 
 High service call routines address-1 low bytes
 ----------------------------------------------
-9AC0 D8          Ø    EQUB &D8			Serv21 - &9CD9 - High abs
-9AC1 DF          ß    EQUB &DF			Serv22 - &9CE0 - High w/s
-9AC2 D4          Ô    EQUB &D4			Serv23 - &9AD5 - Null
-9AC3 E7          ç    EQUB &E7			Serv24 - &9CE8 - Hazel count
-9AC4 E9          é    EQUB &04			Serv25 - &9CEA - FS Info
-9AC5 04          .    EQUB &04			Serv26 - &9D05 - *SHUT
-9AC6 D4          Ô    EQUB &D4			Serv27 - &9AD5 - Null
+9AC0 D8          Ø    EQUB <(&9CD9-1)			;; Serv21 - &9CD9 - High abs
+9AC1 DF          ß    EQUB <(&9CE0-1)			;; Serv22 - &9CE0 - High w/s
+9AC2 D4          Ô    EQUB <(&9AD5-1)			;; Serv23 - &9AD5 - Null
+9AC3 E7          ç    EQUB <(&9CE8-1)			;; Serv24 - &9CE8 - Hazel count
+9AC4 E9          é    EQUB <(&9CEA-1)			;; Serv25 - &9CEA - FS Info
+9AC5 04          .    EQUB <(&9D05-1)			;; Serv26 - &9D05 - *SHUT
+9AC6 D4          Ô    EQUB <(&9AD5-1)			;; Serv27 - &9AD5 - Null
 
 High service call routines address-1 high bytes
 -----------------------------------------------
-9AC7 9C 9C 9A    ...  STZ &9A9C
-9ACA 9C 9C 9D    ...  STZ &9D9C
-9ACD 9A          .    TXS
-
+9AC7 9C               EQUB >(&9CD9-1)
+9AC8 9C               EQUB >(&9CE0-1)
+9AC9 9A               EQUB >(&9AD5-1)
+9ACA 9C               EQUB >(&9CE8-1)
+9ACB 9C               EQUB >(&9CEA-1)
+9ACC 9D               EQUB >(&9D05-1)
+9ACD 9A               EQUB >(&9AD5-1)
 
 SERVICE CALL HANDLER
 ====================
@@ -3796,9 +3719,9 @@ Service calls &21 to &27
 9AF1 C9 28       É(   CMP #&28
 9AF3 B0 E0       °à   BCS &9AD5		Quit with calls >&27
 9AF5 AA          ª    TAX		Pass service call into X
-9AF6 BD A6 9A    ½¦.  LDA &9AA6,X	Index into address table
+9AF6 BD A6 9A    ½¦.  LDA &9AC7-&21,X	;; Index into address table
 9AF9 48          H    PHA		Push service routine address
-9AFA BD 9F 9A    ½..  LDA &9A9F,X	onto stack
+9AFA BD 9F 9A    ½..  LDA &9AC0-&21,X	;; onto stack
 9AFD 80 E9       .é   BRA &9AE8		Jump back to jump to service routine
 
 
@@ -3904,11 +3827,7 @@ Stack now holds:
 9B82 A9 43       ©C   LDA #&43		...change key pressed to 'fadfs'
 9B84 48          H    PHA
 9B85 20 A8 92     ¨.  JSR &92A8		Print FS banner
-9B88 41 63       Ac   EOR (&63,X)	'Acorn ADFS'<cr><cr>
-9B8A 6F 72 6E    orn  BBR 6,&72,&9BFB
-9B8D 20 41 44     AD  JSR &4441
-9B90 46 53       FS   LSR &53
-9B92 0D 8D				Run into ADFS selection
+9B88 41 63       Ac   EQUS "Acorn ADFS", &0D, &8D
 
 Select ADFS
 ===========
@@ -4046,7 +3965,7 @@ Stack now holds:
 
 9CAE 3A 30 2E 4C :0.L EQUS ":0.LIB*"
 9CB2 49 42 2A    IB*
-9CB5 0D          .    EQUB 13
+9CB5 0D          .    EQUB &0D
 
 
 Vector Table
@@ -4107,8 +4026,8 @@ Filing system information
 9CFA 08          .    EQUB &08		Filing system number
 9CFB 39          9    EQUB &39		Highest handle used
 9CFC 30          0    EQUB &30		Lowest handle used
-9CFD 20 20 20 20      EQUS "    sfda"	"adfs" filing system name
-9D01 73 66 64 61 sfda
+9CFD 20 20 20 20      EQUS "    "
+9D01 73 66 64 61      EQUS "sfda"	"adfs" filing system name
 
 Serv26 - *SHUT
 ==============
@@ -4291,25 +4210,18 @@ Exit from OSWORD service call
 9DF4 80 BE       .¾   BRA &9DB4
 
 9DF6 20 A8 92     ¨.  JSR &92A8
-9DF9 0D 41 64    .Ad  ORA &6441
-9DFC 76 61       va   ROR &61,X
-9DFE 6E 63 65    nce  ROR &6563
-9E01 64 20       d    STZ &20
-9E03 44          D    EQUB &44
-9E04 46 53       FS   LSR &53
-9E06 20 31 2E     1.  JSR &2E31
-9E09 35 30       50   AND &30,X
-9E0B 8D 60 98    .`.  STA &9860
+9DF9 0D 41 64    .Ad  EQUS &0D, "Advanced DFS 1.50", &8D
+9E0C 60               RTS
+9E0D 98               TYA
 9E0E 48          H    PHA
 9E0F B1 F2       ±ò   LDA (&F2),Y
 9E11 C9 20       É    CMP #&20
 9E13 B0 29       °)   BCS &9E3E
 9E15 20 F6 9D     ö.  JSR &9DF6
 9E18 20 A8 92     ¨.  JSR &92A8
-9E1B 20 20 41      A  JSR &4120
-9E1E 44          D    EQUB &44
-9E1F 46 53       FS   LSR &53
-9E21 8D 68 A8    .h¨  STA &A868
+9E1B 20 20 41      A  EQUS "  ADFS", &8D
+9E22 68               PLA
+9E23 A8               TAY
 9E24 A6 F4       ¦ô   LDX &F4
 9E26 A9 09       ©.   LDA #&09
 9E28 60          `    RTS
@@ -4343,11 +4255,12 @@ Exit from OSWORD service call
 9E5C BD 2D 9F    ½-.  LDA &9F2D,X
 9E5F 30 C1       0Á   BMI &9E22
 9E61 20 A8 92     ¨.  JSR &92A8
-9E64 20 A0 A0         JSR &A0A0
-9E67 09 BD       .½   ORA #&BD
-9E69 2D 9F 30    -.0  AND &309F
-9E6C 07 20       .    TSB &20
-9E6E 3C A0 E8    < è  BIT &E8A0,X
+9E64 20 A0            EQUB &20, &A0
+9E66 A0 09            LDY #&09
+9E68 BD 2D 9F         LDA &9F2D,X
+9E6B 30 07            BMI &9E74
+9E6D 20 3C A0         JSR &A03C
+9E70 E8               INX
 9E71 88          .    DEY
 9E72 10 F4       .ô   BPL &9E68
 9E74 20 36 A0     6   JSR &A036
@@ -4371,10 +4284,14 @@ Exit from OSWORD service call
 9E92 E8          è    INX
 9E93 80 C7       .Ç   BRA &9E5C
 
-9E95 FB          û    EQUB &FB
-9E96 B1 BD       ±½   LDA (&BD),Y
-9E98 C7 D3       ÇÓ   CPY &D3
-9E9A DD E7 F4    Ýçô  CMP &F4E7,X
+9E95                  EQUB <&9FFB
+9E96                  EQUB <&9FB1
+9E97                  EQUB <&9FBD
+9E98                  EQUB <&9FC7
+9E99                  EQUB <&9FD3
+9E9A                  EQUB <&9FDD
+9E9B                  EQUB <&9FE7
+9E9C                  EQUB <&9FF4
 
 
 FSC - Filing System Control
@@ -4397,27 +4314,33 @@ FSC - Filing System Control
 
 FSC Routine Low Bytes
 ---------------------
-9EBB 00          .    BRK		0  - &A001 - *OPT
-9EBC 48          H    PHA		1  - &AD49 - =EOF
-9EBD DA          Ú    PHX		2  - &A3DB - */
-9EBE D2          Ò    CMP (&DA)		3  - &9ED3 - *command
-9EBF DA          Ú    CMP (&DA)		4  - &A3DB - *RUN
-9EC0 D4          Ô    EQUB &D4		5  - &93D5 - *CAT
-9EC1 6C          l    JMP (&DBFB)	6  - &A96D - NewFS taking over
-9EC2 FB          û    JMP (&DBFB)	7  - &9FFC - File Handle Request
-9EC3 DB          Û    JMP (&DBFB)	8  - &A0DC - OSCLI being processed
-9EC4 39          9    AND &DAED,Y	9  - &943A - *EX
-9EC5 ED          í    AND &DAED,Y	10 - &94EE - *INFO
-9EC6 DA          Ú    AND &DAED,Y	11 - &A3DB - *RUN from library
+9EBB 00          .    EQUB <(&A001-1)    ;;  *OPT
+9EBC 48          H    EQUB <(&AD49-1)    ;;  =EOF
+9EBD DA          Ú    EQUB <(&A3DB-1)    ;;  */
+9EBE D2          Ò    EQUB <(&9ED3-1)    ;;  *command
+9EBF DA          Ú    EQUB <(&A3DB-1)    ;;  *RUN
+9EC0 D4          Ô    EQUB <(&93D5-1)    ;;  *CAT
+9EC1 6C          l    EQUB <(&A96D-1)    ;;  NewFS taking over
+9EC2 FB          û    EQUB <(&9FFC-1)    ;;  File Handle Request
+9EC3 DB          Û    EQUB <(&A0DC-1)    ;;  OSCLI being processed
+9EC4 39          9    EQUB <(&943A-1)    ;;  *EX
+9EC5 ED          í    EQUB <(&94EE-1)    ;;  *INFO
+9EC6 DA          Ú    EQUB <(&A3DB-1)    ;;  *RUN from library
 
 FSC Routine High Bytes
 ----------------------
-9EC7 A0 AD        ­   LDY #&AD
-9EC9 A3          £    EQUB &A3
-9ECA 9E A3 93    .£.  STZ &93A3,X
-9ECD A9 9F       ©.   LDA #&9F
-9ECF A0 94        .   LDY #&94
-9ED1 94 A3       .£   STY &A3,X
+9EC7 A0               EQUB >(&A001-1)
+9EC8 AD               EQUB >(&AD49-1)
+9EC9 A3               EQUB >(&A3DB-1)
+9ECA 9E               EQUB >(&9ED3-1)
+9ECB A3               EQUB >(&A3DB-1)
+9ECC 93               EQUB >(&93D5-1)
+9ECD A9               EQUB >(&A96D-1)
+9ECE 9F               EQUB >(&9FFC-1)
+9ECF A0               EQUB >(&A0DC-1)
+9ED0 94               EQUB >(&943A-1)
+9ED1 94               EQUB >(&94EE-1)
+9ED1 A3               EQUB >(&A3DB-1)
 
 FSC 3 - *command
 ================
@@ -4470,130 +4393,39 @@ FSC 3 - *command
 9F2B 48          H    PHA
 9F2C 60          `    RTS		Jump indirectly to routine
 
-9F2D 41 43       AC   EOR (&43,X)	*ACCESS - &9942, &16
-9F2F 43          C    EQUB &43
-9F30 45 53       ES   EOR &53
-9F32 53          S    EQUB &53
-9F33 99 41 16    .A.  STA &1641,Y
+9F2D 41 43       AC   EQUS "ACCESS", >(&9942-1), <(&9942-1), &16
+0000                  EQUS "BACK", >(&A4D5-1), <(&A4D5-1), &00
+0000                  EQUS "BYE", >(&A103-1), <(&A103-1), &00
+0000                  EQUS "CDIR", >(&9577-1), <(&9577-1), &20
+0000                  EQUS "COMPACT", >(&A2B6-1), <(&A2B6-1), &50
+0000                  EQUS "COPY", >(&A849-1), <(&A849-1), &13
+0000                  EQUS "DESTROY", >(&99E9-1), <(&99E9-1), &10
+0000                  EQUS "DIR", >(&9546-1), <(&9546-1), &20
+0000                  EQUS "DISMOUNT", >(&A151-1), <(&A151-1), &40
+0000                  EQUS "FREE", >(&A063-1), <(&A063-1), &00
+0000                  EQUS "LCAT", >(&A4BD-1), <(&A4BD-1), &00
+0000                  EQUS "LEX", >(&A4C9-1), <(&A4C9-1), &00
+0000                  EQUS "LIB", >(&A482-1), <(&A482-1), &30
+0000                  EQUS "MAP", >(&A092-1), <(&A092-1), &00
+0000                  EQUS "MOUNT", >(&A19E-1), <(&A19E-1), &40
+0000                  EQUS "RENAME", >(&A541-1), <(&A541-1), &22
+0000                  EQUS "TITLE", >(&A292-1), <(&A292-1), &70
+0000                  EQUS >(&A3DB-1), <(&A3DB-1)
 
-9F36 42          B    EQUB &42		*BACK - &A4D5, &00
-9F37 41 43       AC   EOR (&43,X)
-9F39 4B          K    LSR A
-9F3A A4 D4       ¤Ô   LDY &D4
-9F3C 00          .    BRK
-
-9F3D 42          B    EQUB &42		*BYE - &A103, &00
-9F3E 59 45 A1    YE¡  EOR &A145,Y
-9F41 02          .    EQUB &02
-9F42 00          .    BRK
-
-9F43 43          C    EQUB &43
-9F44 44          D    EQUB &44
-9F45 49 52       IR   EOR #&52
-9F47 95 76       .v   STA &76,X
-9F49 20 43 4F     CO  JSR &4F43
-9F4C 4D 50 41    MPA  EOR &4150
-9F4F 43          C    EQUB &43
-9F50 54          T    EQUB &54
-9F51 A2 B5       ¢µ   LDX #&B5
-9F53 50 43       PC   BVC &9F98
-9F55 4F 50 59    OPY  BBR 4,&50,&9FB1
-9F58 A8          ¨    TAY
-9F59 48          H    PHA
-9F5A 13          .    EQUB &13
-9F5B 44          D    EQUB &44
-9F5C 45 53       ES   EOR &53
-9F5E 54          T    EQUB &54
-9F5F 52 4F       RO   EOR (&4F)
-9F61 59 99 E8    Y.è  EOR &E899,Y
-9F64 10 44       .D   BPL &9FAA
-9F66 49 52       IR   EOR #&52
-9F68 95 45       .E   STA &45,X
-9F6A 20 44 49     DI  JSR &4944
-9F6D 53          S    EQUB &53
-9F6E 4D 4F 55    MOU  EOR &554F
-9F71 4E 54 A1    NT¡  LSR &A154
-9F74 50 40       P@   BVC &9FB6
-9F76 46 52       FR   LSR &52
-9F78 45 45       EE   EOR &45
-9F7A A0 62        b   LDY #&62
-9F7C 00          .    BRK
-9F7D 4C 43 41    LCA  JMP &4143
-
-9F80 54          T    EQUB &54
-9F81 A4 BC       ¤¼   LDY &BC
-9F83 00          .    BRK
-9F84 4C 45 58    LEX  JMP &5845
-
-9F87 A4 C8       ¤È   LDY &C8
-9F89 00          .    BRK
-9F8A 4C 49 42    LIB  JMP &4249
-
-9F8D A4 81       ¤.   LDY &81
-9F8F 30 4D       0M   BMI &9FDE
-9F91 41 50       AP   EOR (&50,X)
-9F93 A0 91        .   LDY #&91
-9F95 00          .    BRK
-
-9F96 4D 4F 55    MOU  EOR &554F		*MOUNT - &A19E, &40
-9F99 4E 54 A1    NT¡  LSR &A154
-9F9C 9D 40 52    .@R  STA &5240,X
-
-9F9E 52          R    STA &5240,X
-9F9F 45 4E       EN   EOR &4E
-9FA1 41 4D       AM   EOR (&4D,X)
-9FA3 45 A5       E¥   EOR &A5
-9FA5 40          @    RTI
-
-9FA6 22          "    EQUB &22
-9FA7 54          T    EQUB &54
-9FA8 49 54       IT   EOR #&54
-9FAA 4C 45 A2    LE¢  JMP &A245
-
-9FAD 91 70       .p   STA (&70),Y
-9FAF A3          £    EQUB &A3
-9FB0 DA          Ú    PHX
-9FB1 3C 4C 69    <Li  BIT &694C,X
-9FB4 73          s    EQUB &73
-9FB5 74 20       t    STZ &20,X
-9FB7 53          S    EQUB &53
-9FB8 70 65       pe   BVS &A01F
-9FBA 63          c    EQUB &63
-9FBB 3E 00 3C    >.<  ROL &3C00,X
-9FBE 4F 62 20    Ob   BBR 4,&62,&9FE1
-9FC1 53          S    EQUB &53
-9FC2 70 65       pe   BVS &A029
-9FC4 63          c    EQUB &63
-9FC5 3E 00 3C    >.<  ROL &3C00,X
-9FC8 2A          *    ROL A
-9FC9 4F 62 20    Ob   BBR 4,&62,&9FEC
-9FCC 53          S    EQUB &53
-9FCD 70 65       pe   BVS &A034
-9FCF 63          c    EQUB &63
-9FD0 2A          *    ROL A
-9FD1 3E 00 28    >.(  ROL &2800,X
-9FD4 3C 44 72    <Dr  BIT &7244,X
-9FD7 69 76       iv   ADC #&76
-9FD9 65 3E       e>   ADC &3E
-9FDB 29 00       ).   AND #&00
-9FDD 3C 53 50    <SP  BIT &5053,X
-9FE0 3E 20 3C    > <  ROL &3C20,X
-9FE3 4C 50 3E    LP>  JMP &3E50
-
-9FE6 00          .    BRK
-9FE7 28          (    PLP
-9FE8 4C 29 28    L)(  JMP &2829
-
-9FEB 57          W    EQUB &57
-9FEC 29 28       )(   AND #&28
-9FEE 52 29       R)   EOR (&29)
-9FF0 28          (    PLP
-9FF1 45 29       E)   EOR &29
-9FF3 00          .    BRK
-9FF4 3C 54 69    <Ti  BIT &6954,X
-9FF7 74 6C       tl   STZ &6C,X
-9FF9 65 3E       e>   ADC &3E
-9FFB 00          .    BRK
+9FB1                  EQUS "<List Spec>"
+0000                  EQUB &00
+9FBD                  EQUS "<Ob Spec>"
+0000                  EQUB &00
+9FC7                  EQUS "<*Ob Spec*>"
+0000                  EQUB &00
+9FD3                  EQUS "(<Drive>)"
+0000                  EQUB &00
+9FDD                  EQUS "<SP> <LP>"
+0000                  EQUB &00
+9FE7                  EQUS "(L)(W)(R)(E)"
+0000                  EQUB &00
+9FF4                  EQUS "<Title>"
+9FFB                  EQUB &00
 
 FSC 7 - Handle Request
 ======================
@@ -4625,11 +4457,9 @@ A024 8D FD C1    .ýÁ  STA &C1FD
 A027 4C 91 8F    L..  JMP &8F91
 
 A02A 20 6B 83     k.  JSR &836B
-A02D CB          Ë    EQUB &CB
-A02E 42          B    EQUB &42
-A02F 61 64       ad   ADC (&64,X)
-A031 20 6F 70     op  JSR &706F
-A034 74 00       t.   STZ &00,X
+0000                  EQUB &CB  	ERR=203
+0000                  EQUS "Bad opt"
+0000                  EQUB &00
 A036 A9 20       ©    LDA #&20
 A038 80 02       ..   BRA &A03C
 
@@ -4660,12 +4490,10 @@ A062 60          `    RTS
 A063 20 EA A1     ê¡  JSR &A1EA
 A066 20 06 A2     .¢  JSR &A206
 A069 20 A8 92     ¨.  JSR &92A8
-A06C 46 72       Fr   LSR &72
-A06E 65 65       ee   ADC &65
-A070 8D 20 EA    . ê  STA &EA20
-A073 A1 A0       ¡    LDA (&A0,X)
-A075 01 A2       .¢   ORA (&A2,X)
-A077 02          .    EQUB &02
+A06C 46 72       Fr   EQUS "Free", &8D
+A071 20 EA A1         JSR &A1EA
+A074 A0 01            LDY #&01
+A076 A2 02          . LDX #&02
 A078 38          8    SEC
 A079 B9 FB C0    ¹ûÀ  LDA &C0FB,Y
 A07C F9 15 C2    ù.Â  SBC &C215,Y
@@ -4675,20 +4503,11 @@ A083 CA          Ê    DEX
 A084 10 F3       .ó   BPL &A079
 A086 20 06 A2     .¢  JSR &A206
 A089 20 A8 92     ¨.  JSR &92A8
-A08C 55 73       Us   EOR &73,X
-A08E 65 64       ed   ADC &64
-A090 8D 60 20    .`   STA &2060
-A093 A8          ¨    TAY
-A094 92 41       .A   STA (&41)
-A096 64 64       dd   STZ &64
-A098 72 65       re   ADC (&65)
-A09A 73          s    EQUB &73
-A09B 73          s    EQUB &73
-A09C 20 3A 20     :   JSR &203A
-A09F 20 4C 65     Le  JSR &654C
-A0A2 6E 67 74    ngt  ROR &7467
-A0A5 68          h    PLA
-A0A6 8D A2 00    .¢.  STA &00A2
+A08C 55 73       Us   EQUS "Used", &8D
+A091 60               RTS
+A092 20 A8 92         JSR &92A8
+A095 41       .A      EQUS "Address :  Length", &8D
+A0A7 A2 00    .¢.     LDX #&00
 A0A9 EC FE C1    ìþÁ  CPX &C1FE
 A0AC F0 E3       ðã   BEQ &A091
 A0AE E8          è    INX
@@ -4702,10 +4521,9 @@ A0B9 20 22 93     ".  JSR &9322
 A0BC 88          .    DEY
 A0BD 10 F6       .ö   BPL &A0B5
 A0BF 20 A8 92     ¨.  JSR &92A8
-A0C2 20 20 3A      :  JSR &3A20
-A0C5 20 A0 A6      ¦  JSR &A6A0
-A0C8 C6 A0       Æ    DEC &A0
-A0CA 02          .    EQUB &02
+A0C2 20 20 3A      :  EQUS "  : ", &A0
+A0C7 A6 C6            LDX &C6
+A0C9 A0 02            LDY #&02
 A0CB CA          Ê    DEX
 A0CC BD 00 C1    ½.Á  LDA &C100,X
 A0CF 20 22 93     ".  JSR &9322
@@ -4723,17 +4541,7 @@ A0E1 AE FE C1    ®þÁ  LDX &C1FE		Get FSM size
 A0E4 E0 E1       àá   CPX #&E1
 A0E6 90 A9       .©   BCC &A091		If FSM not filling up, exit
 A0E8 20 A8 92     ¨.  JSR &92A8		Print message
-A0EB 43          C    EQUB &43		"Compaction recommended"
-A0EC 6F 6D 70    omp  BBR 6,&6D,&A15F
-A0EF 61 63       ac   ADC (&63,X)
-A0F1 74 69       ti   STZ &69,X
-A0F3 6F 6E 20    on   BBR 6,&6E,&A116
-A0F6 72 65       re   ADC (&65)
-A0F8 63          c    EQUB &63
-A0F9 6F 6D 6D    omm  BBR 6,&6D,&A169
-A0FC 65 6E       en   ADC &6E
-A0FE 64 65       de   STZ &65
-A100 64 8D       d.   STZ &8D
+A0EB 43          C    EQUB "Compaction recommended", &8D
 A102 60          `    RTS
 
 
@@ -4759,14 +4567,17 @@ A125 68          h    PLA
 A126 8D 17 C3    ..Ã  STA &C317		Restore current drive
 A129 60          `    RTS
 
-A12A 00          .    BRK
-A12B 00          .    BRK		&FFFFC900
-A12C C9 FF       É.   CMP #&FF
-A12E FF 1B 00    ...  BBS 7,&1B,&A131	Command &1B
-A131 00          .    BRK		Drive 0, Sector 0
-A132 00          .    BRK
-A133 00          .    BRK
-A134 00          .    BRK		Zero sectors
+A12A                  EQUB &00
+A12B                  EQUB &00          ;; &FFFFC900
+A12C                  EQUB &C9
+A12D                  EQUB &FF
+A12E                  EQUB &FF
+A12F                  EQUB &1B          ;; Command &1B
+A130                  EQUB &00          ;; Drive 0, Sector 0
+A131                  EQUB &00
+A132                  EQUB &00
+A133                  EQUB &00          ;; Zero sector
+A134                  EQUB &00
 
 A135 20 0D A5     .¥  JSR &A50D
 A138 AC 17 C3    ¬.Ã  LDY &C317
@@ -4809,16 +4620,14 @@ A184 20 89 A1     .¡  JSR &A189
 A187 80 30       .0   BRA &A1B9
 
 A189 A0 09        .   LDY #&09
-A18B B9 94 A1    ¹.¡  LDA &A194,Y
+A18B B9 94 A1    ¹.¡  LDA &A196-2,Y
 A18E 9D 00 C3    ..Ã  STA &C300,X
 A191 E8          è    INX
 A192 88          .    DEY
 A193 10 F6       .ö   BPL &A18B
 A195 60          `    RTS
 
-A196 0D 22 74    ."t  ORA &7422
-A199 65 73       es   ADC &73
-A19B 6E 55 22    nU"  ROR &2255
+A196                  EQUS &0D, &22, "tesnU", &22
 
 *MOUNT
 ======
@@ -4849,13 +4658,17 @@ A1D9 A2 0A       ¢.   LDX #&0A
 A1DB 20 89 A1     .¡  JSR &A189		Set library name to "Unset"
 A1DE 60          `    RTS
 
-A1DF 00          .    BRK		Flag = &00
-A1E0 00          .    BRK		&FFFFC900
-A1E1 C9 FF       É.   CMP #&FF
-A1E3 FF 1B 00    ...  BBS 7,&1B,&A1E6	Command &1B - Park
-A1E6 00          .    BRK		Drive 0, Sector 0
-A1E7 00          .    BRK
-A1E8 01 00       ..   ORA (&00,X)	1 sector
+A1DF                  EQUB &00          ;; Flag = &00
+A1E0                  EQUB &00          ;; &FFFFC900
+A1E1                  EQUB &C9
+A1E2                  EQUB &FF
+A1E3                  EQUB &FF
+A1E4                  EQUB &1B          ;; Command &1B - Park
+A1E5                  EQUB &00          ;; Drive 0, Sector 0
+A1E6                  EQUB &00
+A1E7                  EQUB &00
+A1E8                  EQUB &01          ;; 1 sector
+A1E9                  EQUB &00
 
 A1EA A9 00       ©.   LDA #&00
 A1EC A2 03       ¢.   LDX #&03
@@ -4878,11 +4691,7 @@ A20F 20 22 93     ".  JSR &9322
 A212 AD 16 C2    ­.Â  LDA &C216
 A215 20 22 93     ".  JSR &9322
 A218 20 A8 92     ¨.  JSR &92A8
-A21B 20 53 65     Se  JSR &6553
-A21E 63          c    EQUB &63
-A21F 74 6F       to   STZ &6F,X
-A221 72 73       rs   ADC (&73)
-A223 20 3D A0     =   JSR &A03D
+A21B 20 53 65     Se  EQUS " Sectors =", &A0
 A226 A2 1F       ¢.   LDX #&1F
 A228 8E 33 C2    .3Â  STX &C233
 A22B A9 00       ©.   LDA #&00
@@ -4930,10 +4739,8 @@ A281 20 3C A0     <   JSR &A03C
 A284 CA          Ê    DEX
 A285 10 D8       .Ø   BPL &A25F
 A287 20 A8 92     ¨.  JSR &92A8
-A28A 20 42 79     By  JSR &7942
-A28D 74 65       te   STZ &65,X
-A28F 73          s    EQUB &73
-A290 A0 60        `   LDY #&60
+A28A 20 42 79     By  EQUS " Bytes",&A0
+A291 60               RTS
 A292 20 46 B5     Fµ  JSR &B546
 A295 20 F3 8F     ó.  JSR &8FF3
 A298 20 0D A5     .¥  JSR &A50D
@@ -4970,12 +4777,9 @@ A2D5 8D 61 C2    .aÂ  STA &C261
 A2D8 4C 77 A3    Lw£  JMP &A377
 
 A2DB 20 6B 83     k.  JSR &836B
-A2DE 94 42       .B   STY &42,X
-A2E0 61 64       ad   ADC (&64,X)
-A2E2 20 63 6F     co  JSR &6F63
-A2E5 6D 70 61    mpa  ADC &6170
-A2E8 63          c    EQUB &63
-A2E9 74 00       t.   STZ &00,X
+0000                  EQUB &94  	ERR=148
+0000                  EQUS "Bad compact"
+0000                  EQUB &00
 
 A2EB 8D 15 C2    ..Â  STA &C215
 A2EE C8          È    INY
@@ -5091,12 +4895,9 @@ A3C6 A4 C1       ¤Á   LDY &C1
 A3C8 4C 4C 9A    LL.  JMP &9A4C		Pass on to FSC to call libfs
 
 A3CB 20 6B 83     k.  JSR &836B		Generate error
-A3CE FE 42 61    þBa  INC &6142,X	Error 254, 'Bad command'
-A3D1 64 20       d    STZ &20
-A3D3 63          c    EQUB &63
-A3D4 6F 6D 6D    omm  BBR 6,&6D,&A444
-A3D7 61 6E       an   ADC (&6E,X)
-A3D9 64 00       d.   STZ &00
+0000                  EQUB &FE  	ERR=254
+0000                  EQUS "Bad command"
+0000                  EQUB &00
 
 FSC 2,4,11 - */, *RUN, *RUN from library
 ========================================
@@ -5146,9 +4947,9 @@ A432 31 B6       1¶   AND (&B6),Y
 A434 1A          .    INC A
 A435 D0 08       Ð.   BNE &A43F
 A437 20 6B 83     k.  JSR &836B
-A43A 93          .    EQUB &93
-A43B 4E 6F 21    No!  LSR &216F
-A43E 00          .    BRK
+0000                  EQUB &93  	ERR=147
+0000                  EQUS "No!"
+0000                  EQUB &00
 A43F A9 A5       ©¥   LDA #&A5
 A441 8D A8 C2    .¨Â  STA &C2A8
 A444 A2 A2       ¢¢   LDX #&A2
@@ -5506,13 +5307,9 @@ A6FD AE 17 C3    ®.Ã  LDX &C317		Get current drive
 A700 E8          è    INX		If &FF, no directory loaded
 A701 D0 2B       Ð+   BNE &A72E		Directory loaded, exit
 A703 20 72 83     r.  JSR &8372		Generate error
-A706 A9 4E       ©N   LDA #&4E		"No directory"
-A708 6F 20 64    o d  BBR 6,&20,&A76F
-A70B 69 72       ir   ADC #&72
-A70D 65 63       ec   ADC &63
-A70F 74 6F       to   STZ &6F,X
-A711 72 79       ry   ADC (&79)
-A713 00          .    BRK
+0000                  EQUB &A9  	ERR=169
+0000                  EQUS "No directory"
+0000                  EQUB &00
 
 A714 20 FD A6     ý¦  JSR &A6FD		Check if directory loaded
 A717 A2 00       ¢.   LDX #&00		Point to first character to check
@@ -5528,18 +5325,9 @@ A72C D0 EE       Ðî   BNE &A71C		Loop for 4 characters
 A72E 60          `    RTS
 
 A72F 20 4E 83     N.  JSR &834E		Generate error
-A732 A8          ¨    TAY		"Broken directory"
-A733 42          B    EQUB &42
-A734 72 6F       ro   ADC (&6F)
-A736 6B          k    ROR A
-A737 65 6E       en   ADC &6E
-A739 20 64 69     di  JSR &6964
-A73C 72 65       re   ADC (&65)
-A73E 63          c    EQUB &63
-A73F 74 6F       to   STZ &6F,X
-A741 72 79       ry   ADC (&79)
-A743 00          .    BRK
-
+0000                  EQUB &A8   	ERR=168
+0000                  EQUS "Broken directory"
+0000                  EQUB &00
 
 Get pointer to workspace into &BA/B
 ===================================
@@ -5578,12 +5366,9 @@ A76C F0 F8       ðø   BEQ &A766		Exit if it does
 A76E A9 0F       ©.   LDA #&0F
 A770 8D CE C2    .ÎÂ  STA &C2CE
 A773 20 72 83     r.  JSR &8372		Generate error
-A776 AA          ª    TAX		"Bad sum"
-A777 42          B    EQUB &42
-A778 61 64       ad   ADC (&64,X)
-A77A 20 73 75     su  JSR &7573
-A77D 6D 00 08    m..  ADC &0800
-
+0000                  EQUB &AA  	ERR=170
+0000                  EQUS "Bad sum"
+0000                  EQUB &00
 
 A77F 08          .    PHP		Save all registers
 A780 48          H    PHA
@@ -5947,13 +5732,9 @@ AA42 99 5C C3    .\Ã  STA &C35C,Y
 AA45 4C D0 A9    LÐ©  JMP &A9D0
 
 AA48 20 6B 83     k.  JSR &836B
-AA4B B7 4F       ·O   LDY &4F,X
-AA4D 75 74       ut   ADC &74,X
-AA4F 73          s    EQUB &73
-AA50 69 64       id   ADC #&64
-AA52 65 20       e    ADC &20
-AA54 66 69       fi   ROR &69
-AA56 6C 65 00    le.  JMP (&0065)
+0000                  EQUB &B7  	ERR=183
+0000                  EQUS "Outside file"
+0000                  EQUB &00
 
 OSARGS 2,Y - Read EXT
 ---------------------
@@ -6294,10 +6075,9 @@ ACF3 10 F3       .ó   BPL &ACE8
 ACF5 4C 6E A7    Ln§  JMP &A76E
 
 ACF8 20 6B 83     k.  JSR &836B
-ACFB DE 43 68    ÞCh  DEC &6843,X
-ACFE 61 6E       an   ADC (&6E,X)
-AD00 6E 65 6C    nel  ROR &6C65
-AD03 00          .    BRK
+0000                  EQUB &DE  	ERR=222
+0000                  EQUS "Channel"
+0000                  EQUB &00
 AD04 CA          Ê    DEX
 AD05 CA          Ê    DEX
 AD06 CA          Ê    DEX
@@ -6369,9 +6149,9 @@ AD62 BD AC C3    ½¬Ã  LDA &C3AC,X
 AD65 29 C8       )È   AND #&C8
 AD67 9D AC C3    .¬Ã  STA &C3AC,X
 AD6A 20 6B 83     k.  JSR &836B		Generate an error
-AD6D DF 45 4F    ßEO  BBS 5,&45,&ADBF	Error 'EOF'
-AD70 46 00       F.   LSR &00
-
+0000                  EQUB &DF  	ERR=150
+0000                  EQUS "EOF"
+0000                  EQUB &00
 
 OSBGET
 ======
@@ -6765,15 +6545,9 @@ B0F4 8C CF C2    .ÏÂ  STY &C2CF
 B0F7 A8          ¨    TAY
 B0F8 30 18       0.   BMI &B112
 B0FA 20 6B 83     k.  JSR &836B
-B0FD C1 4E       ÁN   CMP (&4E,X)
-B0FF 6F 74 20    ot   BBR 6,&74,&B122
-B102 6F 70 65    ope  BBR 6,&70,&B16A
-B105 6E 20 66    n f  ROR &6620
-B108 6F 72 20    or   BBR 6,&72,&B12B
-B10B 75 70       up   ADC &70,X
-B10D 64 61       da   STZ &61
-B10F 74 65       te   STZ &65,X
-B111 00          .    BRK
+0000                  EQUB &C1  	ERR=193
+0000                  EQUS "Not open for update"
+0000                  EQUB &00
 
 B112 BD AC C3    ½¬Ã  LDA &C3AC,X
 B115 29 07       ).   AND #&07
@@ -6923,15 +6697,9 @@ B243 F0 1B       ð.   BEQ &B260		Found a spare channel
 B245 CA          Ê    DEX		Loop to next channel
 B246 10 F8       .ø   BPL &B240		Keep going until run out of channels
 B248 20 6B 83     k.  JSR &836B		Generate an error
-B24B C0 54       ÀT   CPY #&54
-B24D 6F 6F 20    oo   BBR 6,&6F,&B270
-B250 6D 61 6E    man  ADC &6E61
-B253 79 20 6F    y o  ADC &6F20,Y
-B256 70 65       pe   BVS &B2BD
-B258 6E 20 66    n f  ROR &6620
-B25B 69 6C       il   ADC #&6C
-B25D 65 73       es   ADC &73
-B25F 00          .    BRK
+0000                  EQUB &C0  	ERR=192
+0000                  EQUS "Too many open files"
+0000                  EQUB &00
 
 Found a spare channel
 ---------------------
@@ -7241,15 +7009,10 @@ B4FB 8D C2 C2    .ÂÂ  STA &C2C2
 B4FE 60          `    RTS
 
 B4FF 20 6B 83     k.  JSR &836B
-B502 C8          È    INY
-B503 44          D    EQUB &44
-B504 69 73       is   ADC #&73
-B506 63          c    EQUB &63
-B507 20 63 68     ch  JSR &6863
-B50A 61 6E       an   ADC (&6E,X)
-B50C 67          g    EQUB &67
-B50D 65 64       ed   ADC &64
-B50F 00          .    BRK
+0000                  EQUB &C8  	ERR=200
+0000                  EQUS "Disc changed"
+0000                  EQUB &00
+
 B510 A9 01       ©.   LDA #&01
 B512 A2 C8       ¢È   LDX #&C8
 B514 A0 C2        Â   LDY #&C2
