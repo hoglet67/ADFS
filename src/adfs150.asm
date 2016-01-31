@@ -2085,6 +2085,37 @@ ENDIF
        DEY
        DEX
        BPL L8C81        ;; Loop for 12 bytes
+IF PATCH_IDE
+       LDY #8
+.RdLp
+       CPY #4           ;; Read full access byte
+       BNE RdNotE
+       DEY
+       DEY
+.RdNotE
+       LDA (&B6),Y
+       ASL A
+       ROL &C22B
+       CPY #4
+       BEQ RdIsE
+       CPY #2
+       BNE RdNext
+       INY
+       INY
+       BRA RdNotE
+.RdIsE
+       DEY
+       DEY
+.RdNext
+       DEY
+       BPL RdLp
+       LDA &C22B
+       LDY #&0E
+       STA (&B8),Y
+       RTS
+       NOP
+       NOP
+ELSE
        LDA #&00
        STA &C22B        ;; Clear byte for access
        LDY #&02         ;; Point to 'L' bit
@@ -2110,6 +2141,7 @@ ENDIF
        LDY #&0E
        STA (&B8),Y      ;; Store access byte in control block
        RTS
+ENDIF
 ;;
 ;; OSFILE &05 - Read Info
 ;; ======================
@@ -2127,7 +2159,11 @@ ENDIF
        LDA (&B6),Y      ;; Get 'E' bit
        BPL L8CCE        ;; 'E' not set, jump
        LDA #&FF         ;; 'E' set, filetype &FF
+IF PATCH_IDE
+       STA &C2C0
+ELSE
        JMP L89D8        ;;                         STA &C2C0
+ENDIF
 ;;
 .L8CCE JSR L8C70
 .L8CD1 JMP L89D5
@@ -2624,7 +2660,11 @@ ENDIF
 ;; OSFILE &01-&03 - Write Info
 ;; ===========================
 .L9085 STA &C223        ;; Save function
+IF PATCH_IDE
+       JSR L8FE8
+ELSE
        JSR L8BF0        ;; Search for non-'E' object
+ENDIF
        BEQ L9090        ;; Jump if file found
        LDA #&00         ;; Return 'no file'
        RTS
@@ -2673,6 +2713,36 @@ ENDIF
 .L90D8 LDY #&0E
        LDA (&B8),Y      ;; Get access byte
        STA &C22B
+IF PATCH_IDE
+       LDY #8
+.WrLp
+        CPY #4         ;; Write full access byte
+        BNE WrNotE
+        DEY
+        DEY
+.WrNotE
+        LDA (&B6),Y
+        ASL A
+        ROL &C22B
+        ROR A
+        STA (&B6),Y
+        CPY #4
+        BEQ WrIsE
+        CPY #2
+        BNE WrNext
+        INY
+        INY
+        BRA WrNotE
+.WrIsE
+        DEY
+        DEY
+.WrNext
+        DEY
+        BPL WrLp
+        NOP
+        NOP
+        NOP
+ELSE
        LDY #&03
        LDA (&B6),Y      ;; Check 'D' bit
        BPL L90F2        ;; Jump if a file
@@ -2693,12 +2763,17 @@ ENDIF
        CPY #&02
        BCC L90F4        ;; Loop until RW done
        BEQ L90EB        ;; 'L' bit, move source down one more bit
+ENDIF
 .L9104 JSR L8F91        ;; RWL done, store catalogue entry
        JMP L8CCE
 ;;
 ;; OSFILE &04 - Write Attributes
 ;; =============================
+IF PATCH_IDE
+.L910A JSR L8FE8
+ELSE
 .L910A JSR L8BF0
+ENDIF
        BEQ L90D8
        LDA #&00
        RTS
@@ -3222,13 +3297,22 @@ ENDIF
        JSR LA03C        ;; Print another space
        LDY #&04
        LDA (&B6),Y      ;; Get 'E' bit
+IF PATCH_IDE
+       NOP
+       NOP
+ELSE
        BMI L9543        ;; If 'E' set, jump to finish      NOP:NOP
+ENDIF
        DEY
        LDA (&B6),Y      ;; Get 'D' bit
        ROL A            ;; Rotate into Carry
        LDX #&0A         ;; X=10, Y-13 if file
        LDY #&0D
+IF PATCH_IDE
+       BRA L9522
+ELSE
        BCC L9522        ;; Jump if file                    BRA L9522
+ENDIF
        LDX #&17         ;; X=23, Y=24 if directory
        LDY #&18         ;; Just print sector start
 ;;
