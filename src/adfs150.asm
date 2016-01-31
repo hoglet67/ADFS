@@ -301,7 +301,7 @@ IF PATCH_IDE
        AND #&FD         ;; Jump if Read (&08) or Write (&0A)
        EOR #&08
        BEQ CommandOk
-       LDA #&60         ;; Return 'unsupported command' otherwise
+       LDA #&27         ;; Return 'unsupported command' otherwise
        BRA CommandExit
 .CommandOk
        LDY #9
@@ -642,7 +642,7 @@ IF PATCH_IDE
        LDA &FC47        ;; Get IDE result
        AND #&21
        BEQ GetResOk
-       ORA &FC41        ;; Get IDE error code, CS already set
+       LDA &FC41        ;; Get IDE error code, CS already set
        LDX #&FF
 .GetResLp
        INX              ;; Translate result code
@@ -2914,9 +2914,16 @@ ENDIF
        STY &B9
        TAY              ;; Y=function                  Unsupported should return A preserved:
 ;;                                                                     NOP
+IF PATCH_IDE
+       NOP              ;; Unsupported OSFILE returns A preserved
+       CLR &C2D5
+       ASL A
+       TYA
+ELSE
        LDX #&00         ;;                             CLR &C2D5
        STX &C2D5        ;;                             ASL A
        ASL A            ;; Index into dispatch table   TAX
+ENDIF
        TAX              ;;                             TYA
        INX              ;;                             INX
        INX              ;;                             INX
@@ -6343,15 +6350,15 @@ ENDIF
 IF PATCH_IDE
        BRA LAB76        ;; Always jump to write
 .ResultCodes
-       EQUB &FF
-       EQUB &FF
-       EQUB &60
-       EQUB &FF
-       EQUB &50
-       EQUB &65
-       EQUB &48
-       EQUB &FF
-       EQUB <L82BD      ;; Junk - so a binary compare will pass
+       EQUB &12
+       EQUB &06
+       EQUB &2F
+       EQUB &02
+       EQUB &10
+       EQUB &28
+       EQUB &11
+       EQUB &19
+       EQUB &03
        EQUB >L82BD      ;; Junk - so a binary compare will pass
 ELSE
        BPL LAB76        ;; Jump ahead with writing
