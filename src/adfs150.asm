@@ -1,5 +1,11 @@
 ORG &8000
 CPU 1
+
+;; This is cludge, need to check this is really not used in IDE Mode
+IF PATCH_IDE
+L81AD=&81AD
+ENDIF
+
 ;;                     ACORN ADFS 1.50 ROM DISASSEMBLY
 ;;                     ===============================
 ;;                   ADFS CODE COPYRIGHT ACORN COMPUTERS
@@ -13,10 +19,18 @@ CPU 1
        JMP L9ACE        ;; Jump to service handler
        EQUB &82         ;; Service ROM, 6502 code
        EQUB &17         ;; Offset to (C)
+IF PATCH_IDE
+       EQUB &53         ;; Binary version number
+ELSE
        EQUB &50         ;; Binary version number
+ENDIF
        EQUS "Acorn ADFS" ;;ROM Title
        EQUB &00
+IF PATCH_IDE
+       EQUS "153"       ;; Version string
+ELSE
        EQUS "150"       ;; Version string
+ENDIF
        EQUB &00         ;; Copyright string
        EQUS "(C)1984"
        EQUB &00
@@ -84,9 +98,15 @@ CPU 1
 ;; Read hard drive status. Waits for status value to settle before returning
 ;; -------------------------------------------------------------------------
 .L806F PHP
+IF PATCH_IDE
+.L8070 LDA &FC47
+       STA &CC
+       LDA &FC47
+ELSE
 .L8070 LDA &FC41        ;; Get SCSI status
        STA &CC          ;; Save this value
        LDA &FC41        ;; Get SCSI status
+ENDIF
        CMP &CC          ;; Compare with previous status
        BNE L8070        ;; Loop until status stays same
        PLP
@@ -94,6 +114,26 @@ CPU 1
 ;;
 ;; Set SCSI to command mode
 ;; ------------------------
+IF PATCH_IDE
+.L807E RTS
+       NOP
+.L8080 NOP
+       NOP
+       RTS
+.ReadBreak
+       JSR L9A88
+       AND #&01
+       RTS
+.WaitForData
+       LDA &FC47        ;;  Loop until data ready
+       BIT #8
+       BEQ WaitForData
+       RTS
+.MountCheck
+       JSR LA19E        ;; Do *MOUNT, then reselect ADFS
+       JMP L9B4A
+       EQUB &F9         ;; Junk - so a binary compare will pass
+ELSE
 .L807E LDY #&00         ;; Useful place to set Y=0
 .L8080 LDA #&01
        PHA              ;; Save data value
@@ -106,6 +146,7 @@ CPU 1
 .L8091 JSR L806F        ;; Get SCSI status
        AND #&02         ;; BUSY?
        BEQ L8091        ;; Loop until not BUSY
+ENDIF
 .L8098 RTS
 ;;
 ;; Initialise retries value
@@ -231,7 +272,12 @@ CPU 1
 ;;
 ;; Access a hard drive via the SCSI interface
 ;; ------------------------------------------
+IF PATCH_IDE
+       LDY #0           ;; Access hard drive
+       NOP
+ELSE
        JSR L807E        ;; Write &01 to SCSI
+ENDIF
 ;;                                         Put SCSI in command mode?
        INY              ;; Y=1
        LDA (&B0),Y      ;; Get Addr0
@@ -248,6 +294,138 @@ CPU 1
        INC A
        BEQ L8137        ;; Address &FFxxxxxx, use I/O memory
 .L8134 JSR L8020        ;; Claim Tube
+IF PATCH_IDE
+.L8137 LDY #5           ;; Get command, CC=Read, CS=Write
+       LDA (&B0),Y
+       CMP #&09
+       AND #&FD         ;; Jump if Read (&08) or Write (&0A)
+       EOR #&08
+       BEQ CommandOk
+       LDA #&60         ;; Return 'unsupported command' otherwise
+       BRA CommandExit
+.CommandOk
+       LDY #9
+.CommandSaveLp
+       LDA &7F,Y        ;; Save &80-&89 and copy block
+       PHA
+       LDA (&B0),Y
+       STA &7F,Y
+       DEY
+       BNE CommandSaveLp
+       LDA &B0
+       PHA
+       LDA &B1
+       PHA
+       JSR UpdateDrive  ;; Merge drive
+;;     LDA #&7F
+       STA &B0          ;; Point to block in RAM
+       STY &B1
+       PHP              ;; Set shape to c*4*64
+       JSR SetGeometry
+       PLP
+.CommandLoop
+       LDX #2
+.Twice                  ;; First pass to seek sector
+       BIT &CD
+       BVC CommandStart ;; Accessing I/O memory
+       PHP
+       PHX
+       LDX #&27         ;; Point to address block
+       LDY #&C2
+       LDA #0           ;; Set Tube action
+       ROL A
+       EOR #1
+       JSR L8213
+       PLX
+       PLP
+.CommandStart           ;; C=R/W, &B0/1=>block
+       JSR SetSector    ;; Set sector, count, command
+.TransferLoop
+       JSR WaitForData
+       AND #&21
+       BNE TransDone
+       BIT &CD
+       BVS TransTube
+       BCC IORead
+.IOWrite
+       LDA (&80),Y
+       STA &FC40
+       BRA TransferByte
+.IORead
+       LDA &FC40
+       STA (&80),Y
+       BRA TransferByte
+.TransTube
+       BCC TubeRead
+.TubeWrite
+       LDA &FEE5
+       STA &FC40
+       BRA TransferByte
+.TubeRead
+       LDA &FC40
+       STA &FEE5
+       BRA TransferByte
+.CommandDone
+       JSR GetResult    ;; Get IDE result
+.CommandExit
+       PHA              ;; Release Tube
+       JSR L803A
+       PLA
+       LDX &B0          ;; Restore registers, set EQ flag
+       LDY &B1
+       AND #&7F
+       RTS
+.TransferByte
+       INY              ;; Loop for 256 bytes
+       BNE TransferLoop
+       DEX
+       BNE Twice        ;; Second pass to do real transfer
+       INC &81
+       LDA &FC47
+       AND #&21
+       BNE TransDone    ;; Error occured
+       INC &C228
+       BNE TubeAddr     ;; Increment Tube address
+       INC &C229
+       BNE TubeAddr
+       INC &C22A
+.TubeAddr
+       INC &87          ;; Increment sector
+       BNE TransCount
+       INC &86
+       BNE TransCount
+       INC &85
+.TransCount
+       DEC &88          ;; Loop for all sectors
+       BNE CommandLoop  ;; Done, check for errors
+.TransDone
+       PLA              ;; Restore pointer
+       STA &B1
+       PLA
+       STA &B0
+       INY
+.CommandRestore         ;; Restore memory
+       PLA
+       STA &7F,Y
+       INY
+       CPY #10
+       BNE CommandRestore
+       BRA CommandDone  ;; Jump to get result
+
+.SetGeometry
+       JSR WaitNotBusy
+       LDA #64          ;; 64 sectors per track
+       STA &FC42
+       STA &FC43
+       LDY #6           ;; Get drive number
+       LDA (&B0),Y
+       LSR A
+       LSR A
+       ORA #3
+       JSR SetDriveA
+       LDA #&91
+       BNE SetCmd       ;; 4 heads per cylinder
+ELSE
 .L8137 LDY #&05
        LDA (&B0),Y      ;; Get Command
        JSR L833E        ;; Send to SCSI data port
@@ -380,6 +558,7 @@ CPU 1
 .L820D LDX #&27
        LDY #&C2
        RTS
+ENDIF
 ;;
 .L8212 SEI
 .L8213 JSR &0406
@@ -388,6 +567,97 @@ CPU 1
 .L821B JSR L821E
 .L821E RTS
 ;;
+IF PATCH_IDE
+.SetSector
+       PHP
+       JSR WaitNotBusy  ;; Save CC/CS Read/Write
+       LDY #8
+       LDA #1           ;; One sector
+       STA &FC42
+       CLC              ;; Set sector b0-b5
+       LDA (&B0),Y
+       AND #63
+       ADC #1
+       STA &FC43
+       DEY              ;; Set sector b8-b15
+       LDA (&B0),Y
+       ADC #1
+       STA &FC44
+       DEY              ;; Set sector b16-b21
+       LDA (&B0),Y
+       JSR SetCylinder
+       INY              ;; Merge Drive and Head
+       INY
+       EOR (&B0),Y
+       AND #2
+       EOR (&B0),Y
+       JSR SetDrive     ;; Get command &08 or &0A
+       DEY
+       DEY
+       DEY
+       LDA (&B0),Y
+.SetCommand
+       AND #2           ;; Copy ~b1 into Cy
+       PHA
+       EOR #2
+       LSR A
+       LSR A
+       PLA              ;; Translate CS->&20 or CC->&30
+       ASL A
+       ASL A
+       ASL A
+       ORA #&20
+       LDY #0           ;; Set command &08 or &0A
+       PLP
+.SetCmd
+       STA &FC47
+       RTS
+.SetDrive
+       ROL A            ;; Move into position
+       ROL A
+       ROL A
+.SetDriveA
+       AND #&13         ;; Set device + sector b6-b7
+       STA &FC46
+       RTS
+.SetCylinder
+       PHA              ;; Set sector b16-b21
+       AND #&3F
+       ADC #0
+       STA &FC45
+       PLA              ;; Get Drive 0-1/2-3 into b1
+       ROL A
+       ROL A
+       ROL A
+       ROL A
+       RTS
+.SetRandom
+       JSR SetCylinder  ;; Set sector b16-b21
+       EOR &C201,X      ;; Merge Drive and Head
+       AND #&02
+       EOR &C201,X
+       JSR SetDrive     ;; Set device and command
+       PLA
+       PHP
+       BRA SetCommand
+.GetResult
+       LDA &FC47        ;; Get IDE result
+       AND #&21
+       BEQ GetResOk
+       ORA &FC41        ;; Get IDE error code, CS already set
+       LDX #&FF
+.GetResLp
+       INX              ;; Translate result code
+       ROR A
+       BCC GetResLp
+       LDA ResultCodes,X
+.GetResOk
+       RTS
+       EQUB &D4       ;; Junk - so a binary compare will pass
+       EQUB &81       ;; Junk - so a binary compare will pass
+       LDA #&FF       ;; Junk - so a binary compare will pass
+       JMP &81D4      ;; Junk - so a binary compare will pass
+ELSE
 .L821F LDX #&27
        LDY #&C2
 .L8223 JSR L8332
@@ -459,6 +729,7 @@ CPU 1
 ;;
 .L82A5 LDA #&FF         ;; Result=&FF
        JMP L81D4        ;; Jump to return result
+ENDIF
 ;;
 ;; Do predefined SCSI operations
 ;; -----------------------------
@@ -522,16 +793,33 @@ CPU 1
 ;;
 ;; Wait until any ensuring completed
 ;; =================================
+IF PATCH_IDE
+.L8328 LDA &CD
+       AND #&FE
+       STA &CD
+       RTS
+ELSE
 .L8328 LDA #&01         ;; Looking at bit 0
        PHP              ;; Save IRQ disable
        CLI              ;; Enable IRQs for a moment
        PLP              ;; Restore IRQ disable
        BIT &CD          ;; Check Ensure
+ENDIF
        BNE L8328        ;; Loop back if set
        RTS
 ;;
 ;; Wait until SCSI ready to respond
 ;; --------------------------------
+IF PATCH_IDE
+.WaitNotBusy
+.L8332  PHP             ;; Get IDE status
+        JSR L806F
+        AND #&C0        ;; Wait for IDE not busy and ready
+        CMP #&40
+        BNE &8333
+        PLP
+        RTS
+ELSE
 .L8332 PHA              ;; Save A
 .L8333 JSR L806F        ;; Get SCSI status
        AND #&20         ;; BUSY?
@@ -539,6 +827,7 @@ CPU 1
        PLA              ;; Restore A
        BIT &CC
        RTS
+ENDIF
 ;;
 .L833E JSR L8332        ;; Wait until SCSI ready
        BVS L8349
@@ -1652,12 +1941,24 @@ CPU 1
        STA &C21E        ;; Set Sector Count to 1
        LDA #&08
        STA &C21A        ;; Command &08 - Read
+IF PATCH_IDE
+       PHX             ;; Load a partial sector
+       JSR SetGeometry ;; Pass sector address to IDE
+       JSR SetSector
+       PLX
+       NOP
+       NOP
+       NOP
+       NOP
+       NOP
+ELSE
        LDY #&00
 .L8B81 LDA &C21A,Y
        JSR L833E        ;; Send control block to SCSI
        INY
        CPY #&06
        BNE L8B81
+ENDIF
        BIT &CD          ;; Check Tube flags
        BVC L8B9B        ;; Tube not being used, jump ahead
        PHX              ;; Save byte count in X
@@ -2224,7 +2525,13 @@ CPU 1
 ;;
 ;; Check Free Space Map consistancy
 ;; ================================
+IF PATCH_IDE
+.L8FF3 RTS              ;; Bodge 'Bad FS map' check
+       EQUB <L9012      ;; Junk - so a binary compare will pass
+       EQUB >L9012      ;; Junk - so a binary compare will pass
+ELSE
 .L8FF3 JSR L9012        ;; Check for overlapping FSM entries
+ENDIF
        JSR L9065        ;; Add up
        CMP &C1FF        ;; Does sector 1 sum match?
        BNE L9003        ;; No, jump to give error
@@ -3601,6 +3908,20 @@ CPU 1
 ;;           X,Y - preserved
 ;;           A   - corrupted
 ;;
+IF PATCH_IDE
+.L9A6C LDA &FC47        ;; &FF - absent, <>&FF - present
+       INC A            ;; &00 - absent, <>&00 - present
+       BEQ DriveNotPresent
+       LDA #0           ;; EQ - present
+       RTS
+.DriveNotPresent
+       DEC A
+       RTS
+       EQUB &FC         ;; Junk - so a binary compare will pass
+       STZ &FC43        ;; Junk - so a binary compare will pass
+       CMP &FC40        ;; Junk - so a binary compare will pass
+       RTS              ;; Junk - so a binary compare will pass
+ELSE
 .L9A6C LDA #&5A
        JSR L9A75
        BNE L9A7E
@@ -3609,6 +3930,7 @@ CPU 1
        STZ &FC43
        CMP &FC40
 .L9A7E RTS
+ENDIF
 ;;
 ;;
 .L9A7F LDA #&A1         ;; Read CMOS
@@ -3761,7 +4083,11 @@ CPU 1
 ;;
 ;; Now do some initialisation. Look for a hard drive?
 ;;
+IF PATCH_PRESERVE_CONTEXT
+       JSR ReadBreak
+ELSE
        JSR L9A88        ;; Read BREAK type
+ENDIF
        BEQ L9B3B        ;; Soft BREAK, jump ahead
        JSR LA744        ;; Find workspace
        TAY              ;; Y=0
@@ -3842,7 +4168,11 @@ CPU 1
        JSR L9A7F        ;; Read CMOS settings
        ASL A            ;; Move NoDir/Dir into bit7
        BPL L9B85        ;; Jump forward with NoDir
+IF PATCH_PRESERVE_CONTEXT
+       JSR ReadBreak
+ELSE
        JSR L9A88        ;; Read BREAK type
+ENDIF
        BEQ L9B85        ;; Jump forward if soft BREAK
        PLA              ;; With Hard BREAK and power on
        LDA #&43         ;; ...change key pressed to 'fadfs'
@@ -3924,14 +4254,26 @@ CPU 1
        INX
        BEQ L9C7D        ;; No drive (eg *fadfs), jump ahead
        JSR LB4CD
+IF PATCH_IDE
+       LDA &C31B        ;; Lib not unset, jump ahead
+       INC A
+       BNE L9C7A
+       LDA &CD          ;; If HD, look for $.Library
+       AND #32
+       BEQ L9C7A
+       BNE L9C41
+       EQUB &1B
+       EQUB &C3
+ELSE
        LDA &C318        ;; Is LIB set to ":0.$"?
        CMP #&02
        BNE L9C7A
        LDA &C319
        ORA &C31A
        ORA &C31B
+ENDIF
        BNE L9C7A        ;; No, don't look for Library
-       LDA #<L9CAE
+.L9C41 LDA #<L9CAE
        STA &B4
        LDA #>L9CAE
        STA &B5          ;; Point to ":0.LIB*"
@@ -4229,7 +4571,11 @@ CPU 1
        BRA L9DB4
 ;;
 .L9DF6 JSR L92A8
+IF PATCH_IDE
+       EQUS &0D, "Advanced DFS 1.53", &8D
+ELSE
        EQUS &0D, "Advanced DFS 1.50", &8D
+ENDIF
        RTS
 .L9E0D TYA
        PHA
@@ -4426,7 +4772,11 @@ CPU 1
        EQUS "LEX", >(LA4C9-1), <(LA4C9-1), &00
        EQUS "LIB", >(LA482-1), <(LA482-1), &30
        EQUS "MAP", >(LA092-1), <(LA092-1), &00
+IF PATCH_IDE
+       EQUS "MOUNT", >(MountCheck-1), <(MountCheck-1), &40
+ELSE
        EQUS "MOUNT", >(LA19E-1), <(LA19E-1), &40
+ENDIF
        EQUS "RENAME", >(LA541-1), <(LA541-1), &22
        EQUS "TITLE", >(LA292-1), <(LA292-1), &70
        EQUS >(LA3DB-1), <(LA3DB-1)
@@ -5827,6 +6177,24 @@ CPU 1
 ;; ------------------------------------------
 .LAAD9 PHA
        JSR L8328        ;; Wait for ensuring to complete
+IF PATCH_IDE
+       JSR WaitNotBusy
+       LDA #1           ;; one sector
+       STA &FC42
+       CLC
+       LDA &C201,X      ;; Set sector b0-b5
+       AND #63
+       ADC #1
+       STA &FC43
+       LDA &C202,X      ;; Set sector b8-b15
+       ADC #1
+       STA &FC44
+       LDA &C203,X      ;; Set sector b16-b21
+       STA &C333
+       JMP SetRandom
+       EQUB <L831E      ;; Junk - so a binary compare will pass
+       EQUB >L831E      ;; Junk - so a binary compare will pass
+ELSE
        JSR L8080        ;; Set SCSI to command mode
        PLA
        JSR L831E        ;; Send command
@@ -5841,6 +6209,7 @@ CPU 1
        JSR L831E
        LDA #&00
        JMP L831E
+ENDIF
 ;;
 .LAB03 JSR LACE6        ;; Check checksum
 .LAB06 JSR LABB4        ;; Check for data lost
@@ -5889,11 +6258,26 @@ CPU 1
        JSR LAAD9        ;; Send command block to SCSI
        LDY #&00
        JSR L8332        ;; Wait for SCSI not busy
+IF PATCH_IDE
+       BRA LAB76        ;; Always jump to write
+.ResultCodes
+       EQUB &FF
+       EQUB &FF
+       EQUB &60
+       EQUB &FF
+       EQUB &50
+       EQUB &65
+       EQUB &48
+       EQUB &FF
+       EQUB <L82BD      ;; Junk - so a binary compare will pass
+       EQUB >L82BD      ;; Junk - so a binary compare will pass
+ELSE
        BPL LAB76        ;; Jump ahead with writing
        JSR L81AD        ;; Release Tube, get SCSI status
        DEC &CE          ;; Decrease retries
        BPL LAB5E        ;; Loop to try again
        JMP L82BD        ;; Generate a disk error
+ENDIF
 ;;
 ;; Write a BPUT buffer to hard drive
 ;; ---------------------------------
@@ -5904,12 +6288,32 @@ CPU 1
        LDA #&01
        TSB &CD
        DEY
+IF PATCH_IDE
+       NOP              ;; Don't trample on IDE register
+       NOP
+       NOP
+ELSE
        STY &FC43        ;; Set &FC43 to &FF
+ENDIF
 .LAB86 LDX &C1
 .LAB88 RTS
 ;;
 ;; Service 5 - Interupt occured
 ;; ============================
+IF PATCH_IDE
+.LAB89 RTS              ;; Remove IRQ routine
+;;
+.UpdateDrive
+       LDA &85          ;; Merge with current drive
+       ORA &C317
+       STA &85
+       STA &C333        ;; Store for any error
+       LDA #&7F
+       RTS
+       EQUB &03         ;; Junk - so a binary compare will pass
+                        ;; 13 spare bytes
+                        ;; next=&ABB4
+ELSE
 .LAB89 LDA &CD          ;; Get flags
        AND #&21         ;; Check for hard drive+IRQ pending
        CMP #&21
@@ -5917,6 +6321,7 @@ CPU 1
        JSR L806F        ;; Get SCSI status
        CMP #&F2
        BEQ LAB9B
+ENDIF
 .LAB98 LDA #&05         ;; Return from service call
        RTS
 ;;
@@ -6063,7 +6468,12 @@ CPU 1
 .LACC1 LDA #&08         ;; &08 - READ
        JSR LAAD9        ;; Send command block to SCSI
        JSR L8332        ;; Wait for SCSI not busy
+IF PATCH_IDE
+       NOP
+       NOP
+ELSE
        BMI LACD5        ;; If SCSI writing, finish
+ENDIF
        LDY #&00
 .LACCD LDA &FC40        ;; Get byte from SCSI
        STA (&BE),Y      ;; Store to buffer
