@@ -581,7 +581,7 @@ IF PATCH_IDE
        STA &FC43
        DEY              ;; Set sector b8-b15
        LDA (&B0),Y
-       ADC #1
+       ADC #0
        STA &FC44
        DEY              ;; Set sector b16-b21
        LDA (&B0),Y
@@ -6187,7 +6187,7 @@ IF PATCH_IDE
        ADC #1
        STA &FC43
        LDA &C202,X      ;; Set sector b8-b15
-       ADC #1
+       ADC #0
        STA &FC44
        LDA &C203,X      ;; Set sector b16-b21
        STA &C333
