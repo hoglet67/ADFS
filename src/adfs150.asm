@@ -191,6 +191,7 @@ CPU 1
 ;; No hard drive present, drive 0 to 7 map onto floppies 0 to 3.
 ;; When hard drives are present, drives 4 to 7 map onto floppies 0 to 3.
 ;;
+IF INCLUDE_FLOPPY
        LDA &CD          ;; Get ADFS I/O status
        AND #&20         ;; Hard drive present?
        BNE L8111        ;; Jump when hard drive present
@@ -213,6 +214,7 @@ CPU 1
        PLA              ;; Restore result
        STA &C2D3        ;; Store
 .L8110 RTS
+ENDIF
 ;;
 ;; ADFS Error Information:
 ;;   &C2D0 Sector b0-b7
@@ -227,7 +229,9 @@ CPU 1
 .L8111 LDY #&06
        LDA (&B0),Y      ;; Get drive
        ORA &C317        ;; OR with current drive
+IF INCLUDE_FLOPPY
        BMI L80F0        ;; Jump back with 4,5,6,7 as floppies
+ENDIF
 ;;
 ;; Access a hard drive via the SCSI interface
 ;; ------------------------------------------
@@ -1245,12 +1249,14 @@ CPU 1
        BCS L886D        ;; >'H' - error
        DEC A            ;; Convert 'A'-'H' to '0' to '7'
 .L885A PHA
+IF INCLUDE_FLOPPY
        LDA &CD
        AND #&20         ;; Hard drive present?
        BNE L8865
        PLA              ;; No hard drive, reduce drive
        AND #&03         ;; number to 0-3
        PHA
+ENDIF
 .L8865 PLA
        AND #&07         ;; Drop top bits to get 0-7 (or 0-3)
        LSR A            ;; Move to top three bits
@@ -1280,9 +1286,11 @@ CPU 1
 .L8899 LDX &C317
        INX
        BNE L88AD
+IF INCLUDE_FLOPPY
        LDA &CD          ;; Get ADFS status byte
        AND #&20         ;; Hard drive present?
        BEQ L88AA        ;; Jump if no hard drive
+ENDIF
        LDA &C2D8        ;; Get CMOS byte RAM copy
        AND #&80         ;; Get hard drive flag
 .L88AA STA &C317        ;; Store in current drive
@@ -1612,6 +1620,7 @@ CPU 1
        ORA &C21B        ;; OR with drive number
        STA &C21B        ;; Store back into control block
        STA &C333
+IF INCLUDE_FLOPPY
        LDA &CD          ;; Get options
        AND #&20         ;; Hard drive present?
        BNE L8B4F        ;; Jump ahead if so
@@ -1629,11 +1638,14 @@ CPU 1
        LSR A
        ADC #&C9
        JMP LBA4E
+ENDIF
 ;;
 ;; Get bytes from a partial sector from a hard drive
 ;; -------------------------------------------------
 .L8B4F LDA &C333        ;; Get drive number
+IF INCLUDE_FLOPPY
        BMI L8B2C        ;; Jump back with floppies
+ENDIF
        JSR L807E        ;; Set SCSI to command mode
        LDA &C216
        STA &B2
@@ -3308,7 +3320,7 @@ CPU 1
        CLC
        PHP
 .L9860 PLP
-       LDA LBFFA,X
+       LDA &BFFA,X
        ADC &C0FA,X
        PHP
        CMP &C2A2,Y
@@ -5870,6 +5882,7 @@ CPU 1
        JSR LB56C        ;; ?
        JSR L8099        ;; Set default retries
        STX &C1
+IF INCLUDE_FLOPPY
        LDA &CD          ;; Get hard drive presence
        AND #&20
        BEQ LAB50        ;; No hard drive, jump forward to do floppy
@@ -5881,6 +5894,7 @@ CPU 1
        DEC &CE
        BPL LAB50
        JMP L82BD
+ENDIF
 ;;
 ;; BPUT to hard drive
 ;; --------------------
@@ -6047,13 +6061,17 @@ CPU 1
        STX &B0
        JSR L8099
 .LACA8 LDX &B0
+IF INCLUDE_FLOPPY
        LDA &CD
        AND #&20
        BEQ LACB5
+ENDIF
        LDA &C203,X
        BPL LACC1
+IF INCLUDE_FLOPPY
 .LACB5 JSR LBA54
        BEQ LACDA
+ENDIF
 .LACBA DEC &CE          ;; Decrement retries
        BPL LACA8        ;; Loop to rey again
        JMP L82BD        ;; Generate a disk error
@@ -7660,6 +7678,8 @@ CPU 1
        PLP
        JMP L803A
 ;;
+IF INCLUDE_FLOPPY
+;;
 ;;
 ;; ACCESS FLOPPY CONTROLLER
 ;; ========================
@@ -7674,9 +7694,11 @@ CPU 1
 ;;
 .LBA54 JMP LBA61
 ;;
+ENDIF
 .LBA57 LDA #&FF
        STA &C2E4
        RTS
+IF INCLUDE_FLOPPY
 ;;
 .LBA5D LDA #&40
        BNE LBA63
@@ -8435,3 +8457,6 @@ CPU 1
        RTS              ;; Return with A=error, EQ=Ok
 ;;
        EQUB &A9
+ENDIF
+
+PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"

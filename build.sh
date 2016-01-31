@@ -32,6 +32,8 @@ do
     # Add into the SSD
     ../tools/mmb_utils/putfile.pl ../build/${ssd} ../build/${name}
 
+    # Report end of code
+    grep "code ends at" ../build/${name}.log
 done
 cd ..
 
