@@ -581,7 +581,6 @@ IF PATCH_IDE
        STA &FC43
        DEY              ;; Set sector b8-b15
        LDA (&B0),Y
-       ADC #0
        STA &FC44
        DEY              ;; Set sector b16-b21
        LDA (&B0),Y
@@ -623,7 +622,6 @@ IF PATCH_IDE
 .SetCylinder
        PHA              ;; Set sector b16-b21
        AND #&3F
-       ADC #0
        STA &FC45
        PLA              ;; Get Drive 0-1/2-3 into b1
        ROL A
@@ -653,8 +651,9 @@ IF PATCH_IDE
        LDA ResultCodes,X
 .GetResOk
        RTS
-       EQUB &D4       ;; Junk - so a binary compare will pass
-       EQUB &81       ;; Junk - so a binary compare will pass
+       BNE &82A5      ;; Junk - so a binary compare will pass
+       TXA            ;; Junk - so a binary compare will pass
+       JMP &81D4      ;; Junk - so a binary compare will pass
        LDA #&FF       ;; Junk - so a binary compare will pass
        JMP &81D4      ;; Junk - so a binary compare will pass
 ELSE
@@ -6187,13 +6186,12 @@ IF PATCH_IDE
        ADC #1
        STA &FC43
        LDA &C202,X      ;; Set sector b8-b15
-       ADC #0
        STA &FC44
        LDA &C203,X      ;; Set sector b16-b21
        STA &C333
        JMP SetRandom
-       EQUB <L831E      ;; Junk - so a binary compare will pass
-       EQUB >L831E      ;; Junk - so a binary compare will pass
+       EQUB &00         ;; Junk - so a binary compare will pass
+       JMP L831E        ;; Junk - so a binary compare will pass
 ELSE
        JSR L8080        ;; Set SCSI to command mode
        PLA
