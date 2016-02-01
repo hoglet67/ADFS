@@ -1,10 +1,6 @@
 ORG &8000
 CPU 1
 
-;; This is cludge, need to check this is really not used in IDE Mode
-IF PATCH_IDE OR PATCH_SD
-L81AD=&81AD
-ENDIF
 
 ;;                     ACORN ADFS 1.50 ROM DISASSEMBLY
 ;;                     ===============================
@@ -324,6 +320,8 @@ ENDIF
 .L8137        
 IF PATCH_SD
 ;;; TODO Add SD Read / SD Write here...
+.CommandDone
+       RTS
 ELIF PATCH_IDE
        LDY #5           ;; Get command, CC=Read, CS=Write
        LDA (&B0),Y
@@ -9008,6 +9006,11 @@ ENDIF
 
 ENDIF
 
+;; This is cludge, need to check this is really not used in IDE Mode
+IF PATCH_IDE OR PATCH_SD
+L81AD=CommandDone
+ENDIF
+        
 IF PATCH_SD
 include "MMC.asm"
 include "MMC_UserPort.asm"
