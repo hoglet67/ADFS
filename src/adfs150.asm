@@ -2,7 +2,7 @@ ORG &8000
 CPU 1
 
 ;; This is cludge, need to check this is really not used in IDE Mode
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
 L81AD=&81AD
 ENDIF
 
@@ -19,14 +19,18 @@ ENDIF
        JMP L9ACE        ;; Jump to service handler
        EQUB &82         ;; Service ROM, 6502 code
        EQUB &17         ;; Offset to (C)
-IF PATCH_IDE
+IF PATCH_SD
+       EQUB &57         ;; Binary version number        
+ELIF PATCH_IDE
        EQUB &53         ;; Binary version number
 ELSE
        EQUB &50         ;; Binary version number
 ENDIF
        EQUS "Acorn ADFS" ;;ROM Title
        EQUB &00
-IF PATCH_IDE
+IF PATCH_SD
+       EQUS "157"       ;; Version string
+ELIF PATCH_IDE
        EQUS "153"       ;; Version string
 ELSE
        EQUS "150"       ;; Version string
@@ -38,6 +42,7 @@ ENDIF
 ;;
 ;; Claim Tube if present
 ;; ---------------------
+.TUBE_CLAIM
 .L8020 LDY #&04
        BIT &CD
        BPL L8039        ;; Exit with no Tube present
@@ -54,6 +59,7 @@ ENDIF
 ;;
 ;; Release Tube if used, and restore Screen settings
 ;; -------------------------------------------------
+.TUBE_RELEASE
 .L803A BIT &CD
        BVC L8047        ;; Tube not being used
        LDA #&84         ;; ADFS Tube ID=&04, &80=Release
@@ -97,27 +103,40 @@ ENDIF
 ;;
 ;; Read hard drive status. Waits for status value to settle before returning
 ;; -------------------------------------------------------------------------
+IF PATCH_SD
+.L806F RTS        
+ELIF PATCH_IDE
 .L806F PHP
-IF PATCH_IDE
-.L8070 LDA &FC47
-       STA &CC
-       LDA &FC47
-ELSE
-.L8070 LDA &FC41        ;; Get SCSI status
+.L8070 LDA &FC47        ;; Get IDE status
        STA &CC          ;; Save this value
-       LDA &FC41        ;; Get SCSI status
-ENDIF
+       LDA &FC47        ;; Get ISE status
        CMP &CC          ;; Compare with previous status
        BNE L8070        ;; Loop until status stays same
        PLP
        RTS
+ELSE
+.L806F PHP
+.L8070 LDA &FC41        ;; Get SCSI status
+       STA &CC          ;; Save this value
+       LDA &FC41        ;; Get SCSI status
+       CMP &CC          ;; Compare with previous status
+       BNE L8070        ;; Loop until status stays same
+       PLP
+       RTS
+ENDIF
 ;;
 ;; Set SCSI to command mode
 ;; ------------------------
-IF PATCH_IDE
+IF PATCH_SD
+.L807E RTS      
+.ReadBreak
+       JSR L9A88
+       AND #&01
+       RTS
+ELIF PATCH_IDE
 .L807E RTS
        NOP
-.L8080 NOP
+       NOP
        NOP
        RTS
 .ReadBreak
@@ -272,7 +291,7 @@ ENDIF
 ;;
 ;; Access a hard drive via the SCSI interface
 ;; ------------------------------------------
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        LDY #0           ;; Access hard drive
        NOP
 ELSE
@@ -294,8 +313,11 @@ ENDIF
        INC A
        BEQ L8137        ;; Address &FFxxxxxx, use I/O memory
 .L8134 JSR L8020        ;; Claim Tube
-IF PATCH_IDE
-.L8137 LDY #5           ;; Get command, CC=Read, CS=Write
+.L8137        
+IF PATCH_SD
+;;; TODO Add SD Read / SD Write here...
+ELIF PATCH_IDE
+       LDY #5           ;; Get command, CC=Read, CS=Write
        LDA (&B0),Y
        CMP #&09
        AND #&FD         ;; Jump if Read (&08) or Write (&0A)
@@ -426,7 +448,7 @@ IF PATCH_IDE
        LDA #&91
        BNE SetCmd       ;; 4 heads per cylinder
 ELSE
-.L8137 LDY #&05
+       LDY #&05
        LDA (&B0),Y      ;; Get Command
        JSR L833E        ;; Send to SCSI data port
        INY
@@ -567,7 +589,8 @@ ENDIF
 .L821B JSR L821E
 .L821E RTS
 ;;
-IF PATCH_IDE
+IF PATCH_SD
+ELIF PATCH_IDE
 .SetSector
        PHP
        JSR WaitNotBusy  ;; Save CC/CS Read/Write
@@ -792,20 +815,27 @@ ENDIF
 ;;
 ;; Wait until any ensuring completed
 ;; =================================
-IF PATCH_IDE
+IF PATCH_SD
 .L8328 LDA &CD
        AND #&FE
        STA &CD
        RTS
+ELIF PATCH_IDE
+.L8328 LDA &CD
+       AND #&FE
+       STA &CD
+       RTS
+       BNE L8328        ;; Junk - so a binary compare will pass
+       RTS              ;; Junk - so a binary compare will pass
 ELSE
 .L8328 LDA #&01         ;; Looking at bit 0
        PHP              ;; Save IRQ disable
        CLI              ;; Enable IRQs for a moment
        PLP              ;; Restore IRQ disable
        BIT &CD          ;; Check Ensure
-ENDIF
        BNE L8328        ;; Loop back if set
        RTS
+ENDIF
 ;;
 ;; Wait until SCSI ready to respond
 ;; --------------------------------
@@ -6265,9 +6295,12 @@ ENDIF
 ;;
 ;; Send a command block to SCSI for BGET/BPUT
 ;; ------------------------------------------
+IF PATCH_SD
+;;; TODO Add SD BGET/BPUT
+.LAAD9 RTS
+ELIF PATCH_IDE
 .LAAD9 PHA
        JSR L8328        ;; Wait for ensuring to complete
-IF PATCH_IDE
        JSR WaitNotBusy
        LDA #1           ;; one sector
        STA &FC42
@@ -6284,6 +6317,8 @@ IF PATCH_IDE
        EQUB &00         ;; Junk - so a binary compare will pass
        JMP L831E        ;; Junk - so a binary compare will pass
 ELSE
+.LAAD9 PHA
+       JSR L8328        ;; Wait for ensuring to complete
        JSR L8080        ;; Set SCSI to command mode
        PLA
        JSR L831E        ;; Send command
@@ -6344,10 +6379,10 @@ ENDIF
 ;; --------------------
 .LAB5E LDX &C1          ;; Get something
        LDA #&0A         ;; &0A - Write
-       JSR LAAD9        ;; Send command block to SCSI
+       JSR LAAD9        ;; Send command block to SCSI/IDE/SD
        LDY #&00
        JSR L8332        ;; Wait for SCSI not busy
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        BRA LAB76        ;; Always jump to write
 .ResultCodes
        EQUB &12
@@ -6377,7 +6412,7 @@ ENDIF
        LDA #&01
        TSB &CD
        DEY
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        NOP              ;; Don't trample on IDE register
        NOP
        NOP
@@ -6389,7 +6424,7 @@ ENDIF
 ;;
 ;; Service 5 - Interupt occured
 ;; ============================
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
 .LAB89 RTS              ;; Remove IRQ routine
 ;;
 .UpdateDrive
@@ -6557,7 +6592,7 @@ ENDIF
 .LACC1 LDA #&08         ;; &08 - READ
        JSR LAAD9        ;; Send command block to SCSI
        JSR L8332        ;; Wait for SCSI not busy
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        NOP
        NOP
 ELSE
@@ -8934,3 +8969,10 @@ ENDIF
        RTS              ;; Return with A=error, EQ=Ok
 ;;
        EQUB &A9
+
+IF PATCH_SD
+include "MMC.asm"
+include "MMC_UserPort.asm"
+ENDIF
+        
+PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"

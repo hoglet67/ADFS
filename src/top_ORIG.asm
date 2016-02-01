@@ -1,4 +1,5 @@
 PATCH_IDE=0
+PATCH_SD=0
 PATCH_PRESERVE_CONTEXT=0
         
 include "adfs150.asm"
