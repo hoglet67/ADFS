@@ -13,7 +13,6 @@ MA=&C000-&0E00			; Offset to Master hidden static workspace
 MP=HI(MA)
 
 buf%              =MA+&0E00
-CurrentCat        =MA+&1082
 cmdseq%           =MA+&1087
 par%              =MA+&1089
 TubeNoTransferIf0 =MA+&109E

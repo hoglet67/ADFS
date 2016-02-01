@@ -203,9 +203,7 @@ ENDIF
 
     \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
-    LDX #&FF
-    STX CurrentCat
-    INX
+    LDX #&00
 
     JSR ShiftRegMode2
 

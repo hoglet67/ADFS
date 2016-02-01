@@ -26,7 +26,6 @@ errptr%=&B8
 .rmmc
 {
 	LDY #&FF
-	STY CurrentCat			; make catalogue invalid
 	STA errno%
 	STX errflag%
 	JSR ResetLEDS
