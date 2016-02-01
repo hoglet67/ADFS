@@ -134,6 +134,9 @@ IF PATCH_SD
        JSR L9A88
        AND #&01
        RTS
+.MountCheck
+       JSR LA19E        ;; Do *MOUNT, then reselect ADFS
+       JMP L9B4A
 ELIF PATCH_IDE
 .L807E RTS
        NOP
@@ -844,7 +847,9 @@ ENDIF
 ;;
 ;; Wait until SCSI ready to respond
 ;; --------------------------------
-IF PATCH_IDE
+IF PATCH_SD
+.L8332  RTS
+ELIF PATCH_IDE
 .WaitNotBusy
 .L8332  PHP             ;; Get IDE status
 .L8333  JSR L806F
@@ -1983,7 +1988,8 @@ ENDIF
        STA &C21E        ;; Set Sector Count to 1
        LDA #&08
        STA &C21A        ;; Command &08 - Read
-IF PATCH_IDE
+IF PATCH_SD
+ELIF PATCH_IDE
        PHX             ;; Load a partial sector
        JSR SetGeometry ;; Pass sector address to IDE
        JSR SetSector
@@ -2128,7 +2134,7 @@ ENDIF
        DEY
        DEX
        BPL L8C81        ;; Loop for 12 bytes
-IF PATCH_IDE
+IF PATCH_FULL_ACCESS
        LDY #8
 .RdLp
        CPY #4           ;; Read full access byte
@@ -2202,7 +2208,7 @@ ENDIF
        LDA (&B6),Y      ;; Get 'E' bit
        BPL L8CCE        ;; 'E' not set, jump
        LDA #&FF         ;; 'E' set, filetype &FF
-IF PATCH_IDE
+IF PATCH_FULL_ACCESS
        STA &C2C0
 ELSE
        JMP L89D8        ;;                         STA &C2C0
@@ -2603,7 +2609,7 @@ ENDIF
 ;;
 ;; Check Free Space Map consistancy
 ;; ================================
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
 .L8FF3 RTS              ;; Bodge 'Bad FS map' check
        EQUB <L9012      ;; Junk - so a binary compare will pass
        EQUB >L9012      ;; Junk - so a binary compare will pass
@@ -2703,7 +2709,7 @@ ENDIF
 ;; OSFILE &01-&03 - Write Info
 ;; ===========================
 .L9085 STA &C223        ;; Save function
-IF PATCH_IDE
+IF PATCH_FULL_ACCESS
        JSR L8FE8
 ELSE
        JSR L8BF0        ;; Search for non-'E' object
@@ -2756,7 +2762,7 @@ ENDIF
 .L90D8 LDY #&0E
        LDA (&B8),Y      ;; Get access byte
        STA &C22B
-IF PATCH_IDE
+IF PATCH_FULL_ACCESS
        LDY #8
 .WrLp
         CPY #4         ;; Write full access byte
@@ -2812,7 +2818,7 @@ ENDIF
 ;;
 ;; OSFILE &04 - Write Attributes
 ;; =============================
-IF PATCH_IDE
+IF PATCH_FULL_ACCESS
 .L910A JSR L8FE8
 ELSE
 .L910A JSR L8BF0
@@ -2957,7 +2963,7 @@ ENDIF
        STY &B9
        TAY              ;; Y=function                  Unsupported should return A preserved:
 ;;                                                                     NOP
-IF PATCH_IDE
+IF PATCH_UNSUPPORTED_OSFILE
        NOP              ;; Unsupported OSFILE returns A preserved
        CLR &C2D5
        ASL A
@@ -3347,7 +3353,7 @@ ENDIF
        JSR LA03C        ;; Print another space
        LDY #&04
        LDA (&B6),Y      ;; Get 'E' bit
-IF PATCH_IDE
+IF PATCH_INFO
        NOP
        NOP
 ELSE
@@ -3358,7 +3364,7 @@ ENDIF
        ROL A            ;; Rotate into Carry
        LDX #&0A         ;; X=10, Y-13 if file
        LDY #&0D
-IF PATCH_IDE
+IF PATCH_INFO
        BRA L9522
 ELSE
        BCC L9522        ;; Jump if file                    BRA L9522
@@ -4041,7 +4047,10 @@ ENDIF
 ;;           X,Y - preserved
 ;;           A   - corrupted
 ;;
-IF PATCH_IDE
+IF PATCH_SD
+.L9A6C LDA #0           ;; EQ - present
+       RTS                 
+ELIF PATCH_IDE
 .L9A6C LDA &FC47        ;; &FF - absent, <>&FF - present
        INC A            ;; &00 - absent, <>&00 - present
        BEQ DriveNotPresent
@@ -4387,7 +4396,7 @@ ENDIF
        INX
        BEQ L9C7D        ;; No drive (eg *fadfs), jump ahead
        JSR LB4CD
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        LDA &C31B        ;; Lib not unset, jump ahead
        INC A
        BNE L9C7A
@@ -4704,7 +4713,9 @@ ENDIF
        BRA L9DB4
 ;;
 .L9DF6 JSR L92A8
-IF PATCH_IDE
+IF PATCH_SD
+       EQUS &0D, "Advanced DFS 1.57", &8D
+ELIF PATCH_IDE
        EQUS &0D, "Advanced DFS 1.53", &8D
 ELSE
        EQUS &0D, "Advanced DFS 1.50", &8D
@@ -4905,7 +4916,7 @@ ENDIF
        EQUS "LEX", >(LA4C9-1), <(LA4C9-1), &00
        EQUS "LIB", >(LA482-1), <(LA482-1), &30
        EQUS "MAP", >(LA092-1), <(LA092-1), &00
-IF PATCH_IDE
+IF PATCH_IDE OR PATCH_SD
        EQUS "MOUNT", >(MountCheck-1), <(MountCheck-1), &40
 ELSE
        EQUS "MOUNT", >(LA19E-1), <(LA19E-1), &40
