@@ -1,7 +1,7 @@
 PATCH_IDE=TRUE
 PATCH_PRESERVE_CONTEXT=TRUE
-TEST_SHIFT=FALSE
+TEST_SHIFT=TRUE
         
 include "adfs150.asm"
 
-SAVE "../build/IDE", &8000, &C000
+SAVE "../build/IDE2", &8000, &C000

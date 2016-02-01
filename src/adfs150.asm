@@ -34,6 +34,9 @@ ENDIF
        EQUB &00         ;; Copyright string
        EQUS "(C)1984"
        EQUB &00
+IF TEST_SHIFT
+       EQUB &A9
+ENDIF
 ;;
 ;;
 ;; Claim Tube if present
@@ -812,10 +815,10 @@ ENDIF
 IF PATCH_IDE
 .WaitNotBusy
 .L8332  PHP             ;; Get IDE status
-        JSR L806F
+.L8333  JSR L806F
         AND #&C0        ;; Wait for IDE not busy and ready
         CMP #&40
-        BNE &8333
+        BNE L8333
         PLP
         RTS
 ELSE
@@ -3705,7 +3708,7 @@ ENDIF
        CLC
        PHP
 .L9860 PLP
-       LDA LBFFA,X
+       LDA &BFFA,X
        ADC &C0FA,X
        PHP
        CMP &C2A2,Y
@@ -8933,5 +8936,7 @@ ENDIF
        AND #&7F         ;; Remove bit 7 and set EQ
        RTS              ;; Return with A=error, EQ=Ok
 ;;
+IF NOT(TEST_SHIFT)
        EQUB &A9
+ENDIF
 PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"
