@@ -4,6 +4,8 @@
 
 \\ ******* HIGH LEVEL MMC CODE ********
 
+trys%=&32
+        
 go_idle_state=&40
 send_op_cond=&41
 send_cid=&4A
@@ -29,8 +31,6 @@ write_block=&58
 	\\ ***** Initialise MMC card *****
 	\\ Carry=0 if ok
 	\\ Carry=1 if card doesn't repsond at all!
-trys%=&32
-attempts%=&C2
 
 .MMC_INIT
 {
@@ -200,40 +200,6 @@ attempts%=&C2
 	JSR ReportMMCErrS
 	EQUB &C5
 	EQUS "MMC Write fault ",0
-
-	\\ **** Read 2 sectors to "Catalogue" ****
-	\\ i.e. pages &E and &F
-	\\ (Start sector must be even)
-.SetupCatRW
-	JSR SetLEDS
-	LDA #0
-	STA TubeNoTransferIf0
-	STA datptr%
-	LDA #MP+&0E
-	STA datptr%+1
-	RTS
-
-	\\ **** Read the Catalogue ****
-.MMC_ReadCatalogue
-	JSR SetupCatRW
-	JSR MMC_SetupRead
-	JSR MMC_StartRead
-	JSR MMC_Read256
-	INC datptr%+1
-	JSR MMC_Read256
-	JSR MMC_16Clocks		; ignore CRC
-	JMP ResetLEDS
-
-	\\ **** Write the Catalgoue ****
-.MMC_WriteCatalogue
-	JSR SetupCatRW
-	JSR MMC_SetupWrite
-	JSR MMC_StartWrite
-	JSR MMC_Write256
-	INC datptr%+1
-	JSR MMC_Write256
-	JSR MMC_EndWrite
-	JMP ResetLEDS
 
 
 	\\ **** Check if data to/from Tube ****
@@ -493,55 +459,6 @@ attempts%=&C2
 	RTS
 }
 
-
-	\\ *** Read the disc title to read16str% ***
-	\\ *** read16sec% contains the address   ***
-	\\ *** of the first disc sector          ***
-read16sec%=&B3	; 3 byte sector value
-read16str%=MA+&1000
-
-.MMC_ReadDiscTitle
-	JSR SetLEDS
-	LDA #0
-	STA TubeNoTransferIf0
-
-	LDA #read_single_block
-	JSR MMC_SetCommand
-	LDA read16sec%
-	STA par%+2
-	LDA read16sec%+1
-	STA par%+1
-	LDA read16sec%+2
-	STA par%
-
-	JSR MMC_StartRead
-	LDA #&00			; LO(read16str%)
-	STA datptr%
-	LDA #MP+&10			; HI(read16str%)
-	STA datptr%+1
-	LDA #8
-	STA byteslastsec%
-	JSR MMC_ReadBLS
-	LDY #256-8
-	JSR MMC_Clocks
-	LDA #&08			; LO(read16str%+8)
-	STA datptr%			; assume same page
-	\LDA #8
-	STA byteslastsec%
-	JSR MMC_ReadBLS
-	LDY #256-8+2
-	JSR MMC_Clocks
-
-	JMP ResetLEDS
-
-
-	\\ **** CHECK MMC STATUS ****
-	\\ Preserves AXY, and values in BC-C5
-.MMC_BEGIN2
-	JSR RememberAXY
-	JSR MMC_BEGIN1
-	JMP MMC_END
-
 	\\ **** BEGIN MMC TRANSACTION ****
 	\\ Save values in BC-C5 at 1090-1099
 .MMC_BEGIN1
@@ -563,65 +480,14 @@ read16str%=MA+&1000
 
 	JSR MMC_INIT
 	BCS carderr
-	JSR MMC_CheckCardID
-
-	\\ Check MMC_SECTOR & DRIVE_INDEX initialised
 .beg2
-	JSR CheckCRC7
-	LDA MMC_SECTOR
-	ORA MMC_SECTOR+1
-	ORA MMC_SECTOR+2
-	BEQ beg3
-	RTS
-
-.beg3
-	JSR MMC_Sector_Reset
-	JMP MMC_LoadDisks
-
+    RTS
+        
 	\\ Failed to initialise card!
 .carderr
 	JSR ReportError
 	EQUB &FF
 	EQUS "Card?",0
-}
-
-	\\ Reset Discs in Drives
-.MMC_LoadDisks
-{
-	LDA #0
-	STA &B9
-	LDX #3
-.loop	STX CurrentDrv
-	STX &B8
-	JSR LoadDrive
-	DEX
-	BPL loop
-	RTS
-}
-
-	\\ If sector 0 set, check it's the same card
-	\\ If ok Z=1
-.MMC_CheckCardID
-{
-	JSR CheckCRC7
-	LDA MMC_SECTOR
-	ORA MMC_SECTOR+1
-	ORA MMC_SECTOR+2
-	BEQ cid_x
-	JSR MMC_GetCIDCRC		; YA=CRC16
-	CMP MMC_CIDCRC+1
-	BNE errCardChanged
-	CPY MMC_CIDCRC
-	BNE errCardChanged
-.cid_x
-	RTS
-
-.errCardChanged
-	LDA #0
-	STA MMC_STATE
-	JSR ReportError
-	EQUB &FF
-	EQUS "Wrong card!",0
 }
 
 	\\ **** END MMC TRANSACTION ****

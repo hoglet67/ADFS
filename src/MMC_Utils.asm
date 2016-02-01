@@ -1,43 +1,3 @@
-    \\ Save AXY and restore after
-	\\ calling subroutine exited
-.RememberAXY
-	PHA
-	TXA 
-	PHA 
-	TYA 
-	PHA 
-	LDA #HI(rAXY_restore-1)		; Return to rAXY_restore
-	PHA 
-	LDA #LO(rAXY_restore-1)
-	PHA 
-
-.rAXY_loop_init
-{
-	LDY #&05
-.rAXY_loop
-	TSX
-	LDA &0107,X
-	PHA
-	DEY
-	BNE rAXY_loop
-	LDY #&0A
-.rAXY_loop2
-	LDA &0109,X
-	STA &010B,X
-	DEX
-	DEY
-	BNE rAXY_loop2
-	PLA
-	PLA
-}
-
-.rAXY_restore
-	PLA 
-	TAY 
-	PLA 
-	TAX 
-	PLA 
-	RTS 
 
 	\ Illuminate Caps Lock & Shift Lock
 .SetLEDS
@@ -49,9 +9,19 @@
 
 	\ Reset LEDs
 .ResetLEDS
-	JSR RememberAXY
+    PHA
+    TXA
+    PHA
+    TYA
+    PHA
 	LDA #&76
-	JMP OSBYTE
+	JSR OSBYTE
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
+    RTS
 
 .PrintHex100
 {
@@ -85,3 +55,35 @@
 	ADC #&30
 	RTS
 }
+
+.TUBE_CheckIfPresent
+	LDA #&EA			; Tube present?
+	LDX #&00			; X=FF if Tube present
+	LDY #&FF
+	JSR OSBYTE
+	TXA 
+	EOR #&FF
+	STA TubePresentIf0
+	RTS 
+
+.TUBE_CLAIM
+{
+	PHA 
+.tclaim_loop
+	LDA #&C0+tubeid%
+	JSR TubeCode
+	BCC tclaim_loop
+	PLA 
+	RTS 
+}
+
+.TUBE_RELEASE
+	JSR TUBE_CheckIfPresent
+	BMI trelease_exit
+.TUBE_RELEASE_NoCheck
+	PHA 
+	LDA #&80+tubeid%
+	JSR TubeCode
+	PLA 
+.trelease_exit
+	RTS 

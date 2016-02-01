@@ -38,7 +38,7 @@ datptr%       =&BC
 sec%          =&BE
 seccount%     =&C1
 skipsec%      =&C2
-;attempts%     =&C2
+attempts%     =&C2
 byteslastsec% =&C3
 EscapeFlag    =&FF
 

@@ -45,7 +45,6 @@ ENDIF
 ;;
 ;; Claim Tube if present
 ;; ---------------------
-.TUBE_CLAIM
 .L8020 LDY #&04
        BIT &CD
        BPL L8039        ;; Exit with no Tube present
@@ -62,7 +61,6 @@ ENDIF
 ;;
 ;; Release Tube if used, and restore Screen settings
 ;; -------------------------------------------------
-.TUBE_RELEASE
 .L803A BIT &CD
        BVC L8047        ;; Tube not being used
        LDA #&84         ;; ADFS Tube ID=&04, &80=Release
@@ -9000,7 +8998,6 @@ ENDIF
 ENDIF
 
 IF PATCH_SD
-include "MMC_Stubs.asm"
 include "MMC.asm"
 include "MMC_UserPort.asm"
 include "MMC_Error.asm"
