@@ -8934,3 +8934,4 @@ ENDIF
        RTS              ;; Return with A=error, EQ=Ok
 ;;
        EQUB &A9
+PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"
