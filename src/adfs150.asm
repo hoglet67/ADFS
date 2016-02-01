@@ -101,7 +101,7 @@ ENDIF
 ;; Read hard drive status. Waits for status value to settle before returning
 ;; -------------------------------------------------------------------------
 IF PATCH_SD
-.L806F RTS        
+;; Drive status is not used in the SD Code
 ELIF PATCH_IDE
 .L806F PHP
 .L8070 LDA &FC47        ;; Get IDE status
@@ -771,7 +771,7 @@ ENDIF
 ;; ----------------
 .L82B4 LDA &C22F
        STA &C317
-       JMP L8BE2
+       JMP L8BE2        ;; Not Found error
 ;;
 .L82BD CMP #&25         ;; Hard drive error &25 (Bad drive)?
        BEQ L82B4        ;; Jump to give 'Not found' error
@@ -811,12 +811,14 @@ ENDIF
        EQUS "Disc protected"
        EQUB &00
 ;;
-.L831E JSR L8324
-       BNE L82BD
+IF NOT(PATCH_SD)        ;; Called only from Floppy and IDE code, not SD code
+.L831E JSR L8324        
+       BNE L82BD        ;; Generate disk error
        RTS
 ;;
-.L8324 JSR L833E
+.L8324 JSR L833E        ;; Wait until nor busy, then write command to command register
        RTS
+ENDIF
 ;;
 ;;
 ;; Wait until any ensuring completed
@@ -866,15 +868,17 @@ ELSE
        RTS
 ENDIF
 ;;
-.L833E JSR L8332        ;; Wait until SCSI ready
+IF NOT(PATCH_SD)        ;; Called only from Floppy and IDE code, not SD code
+.L833E JSR L8332        ;; Wait until SCSI OR IDE ready
        BVS L8349
-       STA &FC40
+       STA &FC40        ;; This works because the SCSI command register is shared
        LDA #&00
        RTS
 ;;
 .L8349 PLA
        PLA
        JMP L81AD
+ENDIF
 ;;
 .L834E LDX &C22F
        INX
@@ -3271,7 +3275,7 @@ ENDIF
        BMI L949E
        JSR L8964
        BEQ L948B
-.L9496 JMP L8BE2
+.L9496 JMP L8BE2        ;; Not Found error
 ;;
 .L9499 JSR L9456
        BNE L9496
@@ -6396,7 +6400,7 @@ IF INCLUDE_FLOPPY
        BEQ LAB86
        DEC &CE
        BPL LAB50
-       JMP L82BD
+       JMP L82BD        ;; Generate disk error
 ENDIF
 ;;
 ;; BPUT to hard drive
