@@ -12,39 +12,23 @@ _VIA_BASE=&FE60         ; Base Address of 6522 VIA
 _TUBE_BASE=&FEE0        ; Base Address of Tube
 _TURBOMMC=0             ; 1 = build for TurboMMC, and enable PB2-4 as outputs
 
-MA=&C000-&0E00			; Offset to Master hidden static workspace
-MP=HI(MA)
+TUBE_R3_DATA        = _TUBE_BASE + &05
 
-buf%              =MA+&0E00
-cmdseq%           =MA+&1087
-par%              =MA+&1089
-TubeNoTransferIf0 =MA+&109E
-MMC_STATE         =MA+&109F			; Bit 6 set if card initialised
-TubePresentIf0    =MA+&10D6
-CardSort          =MA+&10D7
-
-OSBYTE=&FFF4
+sectorcount%        = &C2ED
+cardsort%           = &C2EE
+mmcstate%           = &C2EF
+cmdseq%             = &C2F0
 
         
-TubeCode=&0406
-TUBE_R1_STATUS=_TUBE_BASE + &00
-TUBE_R1_DATA  =_TUBE_BASE + &01
-TUBE_R2_STATUS=_TUBE_BASE + &02
-TUBE_R2_DATA  =_TUBE_BASE + &03
-TUBE_R3_STATUS=_TUBE_BASE + &04
-TUBE_R3_DATA  =_TUBE_BASE + &05
-TUBE_R4_STATUS=_TUBE_BASE + &06
-TUBE_R4_DATA  =_TUBE_BASE + &07
+datptr%             = &B2        
 
-datptr%       =&BC
-sec%          =&BE
-seccount%     =&C1
-skipsec%      =&C2
-attempts%     =&C2
-byteslastsec% =&C3
-EscapeFlag    =&FF
+attempts%           = &80  ;; TODO: Change this to a safe ZP location !!
+errno%              = &80  ;; TODO: Change this to a safe ZP location !!
+errflag%            = &81  ;; TODO: Change this to a safe ZP location !!
+errptr%             = &82  ;; TODO: Change this to a safe ZP location !!
 
-tubeid%=&0A			; See Tube Application Note No.004 Page 7
+EscapeFlag          = &FF
+        
         
 include "adfs150.asm"
 

@@ -16,7 +16,7 @@ CPU 1
        EQUB &82         ;; Service ROM, 6502 code
        EQUB &17         ;; Offset to (C)
 IF PATCH_SD
-       EQUB &57         ;; Binary version number        
+       EQUB &57         ;; Binary version number
 ELIF PATCH_IDE
        EQUB &53         ;; Binary version number
 ELSE
@@ -57,6 +57,7 @@ ENDIF
 ;;
 ;; Release Tube if used, and restore Screen settings
 ;; -------------------------------------------------
+.TUBE_RELEASE
 .L803A BIT &CD
        BVC L8047        ;; Tube not being used
        LDA #&84         ;; ADFS Tube ID=&04, &80=Release
@@ -125,7 +126,7 @@ ENDIF
 ;; Set SCSI to command mode
 ;; ------------------------
 IF PATCH_SD
-.L807E RTS      
+.L807E RTS
 .ReadBreak
        JSR L9A88
        AND #&01
@@ -317,11 +318,11 @@ ENDIF
        INC A
        BEQ L8137        ;; Address &FFxxxxxx, use I/O memory
 .L8134 JSR L8020        ;; Claim Tube
-.L8137        
+.L8137
 IF PATCH_SD
-;;; TODO Add SD Read / SD Write here...
-.CommandDone
-       RTS
+
+include "SD_Driver.asm"
+
 ELIF PATCH_IDE
        LDY #5           ;; Get command, CC=Read, CS=Write
        LDA (&B0),Y
@@ -812,7 +813,7 @@ ENDIF
        EQUB &00
 ;;
 IF NOT(PATCH_SD)        ;; Called only from Floppy and IDE code, not SD code
-.L831E JSR L8324        
+.L831E JSR L8324
        BNE L82BD        ;; Generate disk error
        RTS
 ;;
@@ -4051,7 +4052,7 @@ ENDIF
 ;;
 IF PATCH_SD
 .L9A6C LDA #0           ;; EQ - present
-       RTS                 
+       RTS
 ELIF PATCH_IDE
 .L9A6C LDA &FC47        ;; &FF - absent, <>&FF - present
        INC A            ;; &00 - absent, <>&00 - present
@@ -4336,6 +4337,9 @@ ENDIF
        LDA #&10
        STA &C200
        STZ &C2D7
+IF PATCH_SD
+       STZ mmcstate%    ;; mark the mmc system as un-initialized
+ENDIF
        JSR L9A7F        ;; Get ADFS CMOS byte
        STA &C2D8        ;; Store in workspace
        LDY #&0D         ;; Initialise vectors
@@ -9014,12 +9018,11 @@ ENDIF
 IF PATCH_IDE OR PATCH_SD
 L81AD=CommandDone
 ENDIF
-        
+
 IF PATCH_SD
 include "MMC.asm"
 include "MMC_UserPort.asm"
 include "MMC_Error.asm"
-include "MMC_Utils.asm"
 ENDIF
-        
+
 PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"
