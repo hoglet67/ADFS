@@ -11,14 +11,11 @@ set_blklen       =&50
 read_single_block=&51
 write_block      =&58
 
-
-
 ;; **** Begin Read Transaction ****
 .MMC_StartRead
      JSR MMC_DoCommand
      BNE errRead
      JMP MMC_WaitForData
-
 
 ;; **** Begin Write Transaction ****
 .MMC_StartWrite
@@ -27,14 +24,20 @@ write_block      =&58
      JMP MMC_SendingData
 
 .errRead
-     JSR ReportMMCErrS
+     ORA #&40  ;; Setting bit 6 in the fault code will ensure it's printed
+     TAX
+     JSR L8374 ;; This version prints the fault code in X
      EQUB &C5
-     EQUS "MMC Read fault ",0
+     EQUS "MMC Read fault"
+     EQUB &00
 
 .errWrite
-     JSR ReportMMCErrS
+     ORA #&40  ;; Setting bit 6 in the fault code will ensure it's printed
+     TAX
+     JSR L8374 ;; This version prints the fault code in X
      EQUB &C5
-     EQUS "MMC Write fault ",0
+     EQUS "MMC Write fault"
+     EQUB &00
 
 
 ;; **** Set-up MMC command sequence ****
@@ -181,12 +184,11 @@ write_block      =&58
 
      ;; Failed to set block length
 .blkerr
-     JSR ReportMMCErrS
-     EQUB &FF
-     EQUS "Set block len error ",0
+     JSR L8372
+     EQUB &CD
+     EQUS "MMC Set block len error"
+     EQUB &00
 }
-
-
 
 .MMC_BEGIN
 {
@@ -209,11 +211,13 @@ write_block      =&58
      PLA
      RTS
 
-     ;; Failed to initialise card!
+;; Failed to initialise card!
 .carderr
-     JSR ReportError
-     EQUB &FF
-     EQUS "Card?",0
+     JSR L8372
+     EQUB &CD
+     EQUS "Card?"
+     EQUB &00
+     
 }
 
 ;; Translate the sector number into a SPI Command Address

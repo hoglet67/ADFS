@@ -9071,7 +9071,6 @@ ENDIF
 IF PATCH_SD
 include "MMC.asm"
 include "MMC_UserPort.asm"
-include "MMC_Error.asm"
 ENDIF
 
 PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"

@@ -439,7 +439,7 @@ ENDIF
     TAY
     AND #&1F
     CMP #5
-    BNE errWrite2
+    BNE error
 
     LDX #(1 + msbits)
 .ewu2
@@ -447,8 +447,11 @@ ENDIF
     CMP #&FF
     BNE ewu2
     RTS
+.error
+    JMP errWrite
 }
 
+        
 ;; *** Write 512 byte sector from datptr or tube, skipping alternative bytes ***
 .MMC_Write512
 IF _TURBOMMC

@@ -14,22 +14,16 @@ _TURBOMMC=0             ; 1 = build for TurboMMC, and enable PB2-4 as outputs
 
 TUBE_R3_DATA        = _TUBE_BASE + &05
 
+attempts%           = &C2EC
 sectorcount%        = &C2ED
 cardsort%           = &C2EE
 mmcstate%           = &C2EF
 cmdseq%             = &C2F0
 
-        
-datptr%             = &B2        
-
-attempts%           = &80  ;; TODO: Change this to a safe ZP location !!
-errno%              = &80  ;; TODO: Change this to a safe ZP location !!
-errflag%            = &81  ;; TODO: Change this to a safe ZP location !!
-errptr%             = &82  ;; TODO: Change this to a safe ZP location !!
+datptr%             = &B2
 
 EscapeFlag          = &FF
-        
-        
+
 include "adfs150.asm"
 
 SAVE "../build/SD", &8000, &C000
