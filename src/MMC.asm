@@ -11,6 +11,39 @@ set_blklen       =&50
 read_single_block=&51
 write_block      =&58
 
+
+
+;; **** Begin Read Transaction ****
+.MMC_StartRead
+     JSR MMC_DoCommand
+     BNE errRead
+     JMP MMC_WaitForData
+
+
+;; **** Begin Write Transaction ****
+.MMC_StartWrite
+     JSR MMC_DoCommand
+     BNE errWrite
+     JMP MMC_SendingData
+
+.errRead
+     JSR ReportMMCErrS
+     EQUB &C5
+     EQUS "MMC Read fault ",0
+
+.errWrite
+     JSR ReportMMCErrS
+     EQUB &C5
+     EQUS "MMC Write fault ",0
+
+
+;; **** Set-up MMC command sequence ****
+;; C=0 for read, C=1 for write 
+.MMC_SetupRW
+     LDA #write_block
+     BCS MMC_SetCommand
+     LDA #read_single_block
+        
 ;; **** Reset MMC Command Sequence ****
 ;; A=cmd, token=&FF
 
@@ -30,7 +63,7 @@ write_block      =&58
 ;; ***** Initialise MMC card *****
 ;; Carry=0 if ok
 ;; Carry=1 if card doesn't repsond at all!
-
+;; corrupts A,X,Y
 .MMC_INIT
 {
      LDA #0
@@ -154,41 +187,10 @@ write_block      =&58
 }
 
 
-;; **** Set-up MMC command sequence ****
-.MMC_SetupRW
-     LDA #write_block
-     BCS setuprw
-     LDA #read_single_block
-.setuprw
-     JSR MMC_SetCommand
-     JMP setCommandAddress
-
-;; **** Begin Read Transaction ****
-.MMC_StartRead
-     JSR MMC_DoCommand
-     BNE errRead
-     JMP MMC_WaitForData
-
-
-;; **** Begin Write Transaction ****
-.MMC_StartWrite
-     JSR MMC_DoCommand
-     BNE errWrite
-     JMP MMC_SendingData
-
-.errRead
-     JSR ReportMMCErrS
-     EQUB &C5
-     EQUS "MMC Read fault ",0
-
-.errWrite
-     JSR ReportMMCErrS
-     EQUB &C5
-     EQUS "MMC Write fault ",0
-
 
 .MMC_BEGIN
 {
+     PHA
      ;; Reset device
      JSR MMC_DEVICE_RESET
 
@@ -197,10 +199,15 @@ write_block      =&58
      BIT mmcstate%
      BVS beg2
 
+     PHX
+     PHY
      JSR MMC_INIT
+     PLY
+     PLX
      BCS carderr
 .beg2
-    RTS
+     PLA
+     RTS
 
      ;; Failed to initialise card!
 .carderr
@@ -210,9 +217,21 @@ write_block      =&58
 }
 
 ;; Translate the sector number into a SPI Command Address
-;; Sector number is in 256 bytes sectors
+;; Sector number is in 256 bytes sectors which are stretched to become 512 byte sectors
 ;; For SDHC cards this is in blocks (which are also sectors)
 ;; For SD cards this needs converting to bytes by multiplying by 512
+
+.setRandomAddress
+{
+    PHX
+    LDA &C203,X    ;; MSB of sector number   
+    PHA
+    LDA &C202,X
+    PHA
+    LDA &C201,X    ;; LSB of sector number
+    PHA
+    BRA setAddressFromStack
+}
 
 ;; (&B0) + 8 is the LSB
 ;; (&B0) + 6 is the MSB
@@ -221,7 +240,20 @@ write_block      =&58
 
 .setCommandAddress
 {
-     LDY #8          ;; Point to sector LSB in the control block
+    PHX
+    LDY #6          ;; Point to sector MSB in the control block
+    LDX #3          ;; sector number is 3 bytes
+.loop
+    LDA (&B0), Y    ;; Stack the MSB first, LSB last
+    PHA
+    INY
+    DEX
+    BNE loop
+}    
+
+        
+.setAddressFromStack
+{
      LDX #3          ;; sector number is 3 bytes
 ;;
      LDA cardsort%   ;; Skip multiply for SDHC cards (cardsort = 01)
@@ -231,26 +263,26 @@ write_block      =&58
 ;; Convert to bytes by multiplying by 512
 ;;
      CLC
-.loop                   ;; for SD the command address is bytes
-     LDA (&B0), Y
+.loop                ;; for SD the command address is bytes
+     PLA
      ROL A
      STA cmdseq%+1, X
-     DEY
      DEX
      BNE loop
      STX cmdseq%+5   ;; LSB is always 0
+     PLX
      RTS
 }
 
 .setCommandAddressSDHC
 {
-.loop                   ;; for SDHC the command address is sectors
-     LDA (&B0), Y
+.loop                ;; for SDHC the command address is sectors
+     PLA
      STA cmdseq%+2, X
-     DEY
      DEX
      BNE loop
      STX cmdseq%+2   ;; MSB is always 0
+     PLX
      RTS
 }
 

@@ -2,7 +2,6 @@
 ;; (C) 2015 David Banks
 ;; Based on code from JGH's IDE Patch
 
-\\ mmbeeb USER PORT MMC DEVICE
        LDY #5           ;; Get command, CC=Read, CS=Write
        LDA (&B0),Y
        CMP #&09
@@ -34,7 +33,8 @@
        PLP
        PHP              ;; Stack the carry flag: C=0 for read, C=1 for write
        JSR MMC_SetupRW
-
+       JSR setCommandAddress
+        
        LDY #9
        LDA (&B0), Y     ;; Read the number of sectors to be transferred
        STA sectorcount%

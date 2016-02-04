@@ -1992,6 +1992,10 @@ ENDIF
        LDA #&08
        STA &C21A        ;; Command &08 - Read
 IF PATCH_SD
+       JSR MMC_BEGIN    ;; Initialize the card, if not already initialized
+       CLC              ;; C=0 for reads
+       JSR MMC_SetupRW  ;; Setup SD card command block        
+       JSR setCommandAddress
 ELIF PATCH_IDE
        PHX             ;; Load a partial sector
        JSR SetGeometry ;; Pass sector address to IDE
@@ -2018,6 +2022,21 @@ ENDIF
        LDA #&01
        JSR &0406        ;; Set Tube transfer address
        PLX              ;; Get byte count back
+IF PATCH_SD
+.L8B9B PHX
+       JSR MMC_StartRead
+       PLX
+       PHX
+       JSR MMC_ReadX
+       PLA
+	   EOR #&FF         ;; Calculate 256 - bytecount
+	   TAY
+	   INY
+       JSR MMC_Clocks	;; ignore rest of sector
+       JSR MMC_Clocks	;; twice, as sectors are stretched to 512 bytes
+       JSR MMC_16Clocks	;; ignore CRC
+       ;; TODO Add error handling
+ELSE
 .L8B9B LDY #&00         ;; Fetch 256 bytes
        JSR L8332        ;; Wait for SCSI ready
        BMI L8BBB        ;; Jump ahead if switched to write
@@ -2033,6 +2052,7 @@ ENDIF
 .L8BB7 DEX              ;; Decrement byte count
 .L8BB8 INY              ;; Next byte to fetch
        BNE L8BA2        ;; Loop for all 256 bytes
+ENDIF
 ;;
 .L8BBB JMP L81AD        ;; Jump to release and finish
 ;;
@@ -6326,8 +6346,12 @@ ENDIF
 ;; Send a command block to SCSI for BGET/BPUT
 ;; ------------------------------------------
 IF PATCH_SD
-;;; TODO Add SD BGET/BPUT
-.LAAD9 RTS
+.LAAD9 CMP #&09         ;; C=0 for read, C=1 for write
+       PHP
+       JSR MMC_BEGIN    ;; Initialize the card, if not already initialized
+       PLP
+       JSR MMC_SetupRW  ;; Setup SD card command block        
+       JMP setRandomAddress ;; Set the sector addess from &C201,X .. &C203,X        
 ELIF PATCH_IDE
 .LAAD9 PHA
        JSR L8328        ;; Wait for ensuring to complete
@@ -6437,10 +6461,16 @@ ENDIF
 ;;
 ;; Write a BPUT buffer to hard drive
 ;; ---------------------------------
+IF PATCH_SD
+.LAB76 JSR MMC_StartWrite
+       JSR MMC_Write512
+       JSR MMC_EndWrite
+ELSE
 .LAB76 LDA (&BC),Y      ;; Get byte from buffer
        STA &FC40        ;; Send to SCSI
        INY
        BNE LAB76        ;; Loop for 256 bytes
+ENDIF
        LDA #&01
        TSB &CD
        DEY
@@ -6635,10 +6665,29 @@ ELSE
        BMI LACD5        ;; If SCSI writing, finish
 ENDIF
        LDY #&00
+IF PATCH_SD     
+.LACCD LDA &B2
+       PHA
+       LDA &B3
+       PHA
+       LDA &BE
+       STA &B2
+       LDA &BF
+       STA &B3
+       JSR MMC_StartRead
+       JSR MMC_Read512
+       JSR MMC_16Clocks	;; ignore CRC
+       PLA
+       STA &B3
+       PLA
+       STA &B2
+       ;; TODO Add error handling
+ELSE        
 .LACCD LDA &FC40        ;; Get byte from SCSI
        STA (&BE),Y      ;; Store to buffer
        INY
        BNE LACCD        ;; Loop for 256 bytes
+ENDIF
 .LACD5 JSR L81AD        ;; Release and get result
        BNE LACBA        ;; Retry with error
 .LACDA LDX &B0          ;; Restore X & Y

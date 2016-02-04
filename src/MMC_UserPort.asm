@@ -23,6 +23,7 @@ ENDIF
 
 
 ;; Reset the User VIA
+;; corrupts A
 .MMC_DEVICE_RESET
     LDA #(3 + msbits)
     STA iorb%
