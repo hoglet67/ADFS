@@ -2990,13 +2990,14 @@ IF PATCH_UNSUPPORTED_OSFILE
        NOP              ;; Unsupported OSFILE returns A preserved
        CLR &C2D5
        ASL A
+       TAX
        TYA
 ELSE
        LDX #&00         ;;                             CLR &C2D5
        STX &C2D5        ;;                             ASL A
        ASL A            ;; Index into dispatch table   TAX
-ENDIF
        TAX              ;;                             TYA
+ENDIF
        INX              ;;                             INX
        INX              ;;                             INX
        BMI L9270        ;; <&FF, return with A=func*2  BMI L9270
