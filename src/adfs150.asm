@@ -4952,6 +4952,14 @@ ENDIF
        EQUS "TITLE", >(LA292-1), <(LA292-1), &70
        EQUS >(LA3DB-1), <(LA3DB-1)
 ;;
+IF PATCH_SD
+       ;; The next set of strings must not straddle a page boundary
+       ;; because code assumes the MSB is constant. See code at
+       ;; .L9283 
+       IF  ((P% AND &FF) > &B1)
+               ORG ((P% + &FF) AND &FF00) 
+       ENDIF
+ENDIF
 .L9FB1 EQUS "<List Spec>"
        EQUB &00
 .L9FBD EQUS "<Ob Spec>"
