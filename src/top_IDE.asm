@@ -8,5 +8,3 @@ TEST_SHIFT=FALSE
 INCLUDE_FLOPPY=TRUE
         
 include "adfs150.asm"
-
-SAVE "../build/IDE", &8000, &C000

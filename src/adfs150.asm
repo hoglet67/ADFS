@@ -9083,3 +9083,5 @@ include "MMC_UserPort.asm"
 ENDIF
 
 PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"
+
+SAVE "", &8000, &C000
