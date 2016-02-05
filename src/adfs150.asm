@@ -2632,7 +2632,7 @@ ENDIF
 ;;
 ;; Check Free Space Map consistancy
 ;; ================================
-IF PATCH_IDE OR PATCH_SD
+IF PATCH_IDE
 .L8FF3 RTS              ;; Bodge 'Bad FS map' check
        EQUB <L9012      ;; Junk - so a binary compare will pass
        EQUB >L9012      ;; Junk - so a binary compare will pass
