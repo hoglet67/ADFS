@@ -146,9 +146,9 @@ ENDIF
     LDA sr%
     AND #1
     BNE wrup
+.wrup_timeout
     LDX #(1 + msbits)
     LDA #(3 + msbits)
-.wrup_timeout
     RTS
 }
 
@@ -174,10 +174,10 @@ ENDIF
 
 .MMC_ReadX
     JSR ShiftRegMode2
+    LDY #0
     BIT &CD
     BVS MMC_ReadToTube
         
-    LDY #0
 .MMC_ReadToMemory
     JSR WaitForShiftDoneNotLast
     STA (datptr%),Y
@@ -191,6 +191,7 @@ ENDIF
     JSR WaitForShiftDoneNotLast
     STA TUBE_R3_DATA
     JSR WaitForShiftDone   ;; Dummy read
+    INY
     DEX
     BNE MMC_ReadToTube
     RTS
