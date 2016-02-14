@@ -6471,9 +6471,21 @@ ENDIF
 ;; Write a BPUT buffer to hard drive
 ;; ---------------------------------
 IF PATCH_SD
-.LAB76 JSR MMC_StartWrite
-       JSR MMC_Write512
+.LAB76 LDA &B2
+       PHA
+       LDA &B3
+       PHA
+       LDA &BC
+       STA &B2
+       LDA &BD
+       STA &B3
+       JSR MMC_StartWrite
+       JSR MMC_Write256
        JSR MMC_EndWrite
+       PLA
+       STA &B3
+       PLA
+       STA &B2
 ELSE
 .LAB76 LDA (&BC),Y      ;; Get byte from buffer
        STA &FC40        ;; Send to SCSI
