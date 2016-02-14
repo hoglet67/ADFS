@@ -169,7 +169,7 @@ ENDIF
 ;; using shift register mode 2.
 
 ;; *** Read 512 byte sector to datptr or tube, skipping alternative bytes ***
-.MMC_Read512
+.MMC_Read256
     LDX #0
 
 .MMC_ReadX
@@ -454,7 +454,7 @@ ENDIF
 
         
 ;; *** Write 512 byte sector from datptr or tube, skipping alternative bytes ***
-.MMC_Write512
+.MMC_Write256
 IF _TURBOMMC
     JSR ShiftRegMode6
 ENDIF
@@ -522,3 +522,28 @@ IF _TURBOMMC
 ELSE
     RTS
 ENDIF
+
+;; The read code below now operates in turbo mode on all hardware
+;; using shift register mode 2.
+
+;; *** Read 512 byte sector to datptr
+.MMC_Read512
+{        
+    JSR ShiftRegMode2       
+    LDX #0
+    LDY #0
+.loop1
+    JSR WaitForShiftDoneNotLast
+    STA (datptr%),Y
+    INY
+    DEX
+    BNE loop1
+    INC datptr%+1
+.loop2
+    JSR WaitForShiftDone
+    STA (datptr%),Y
+    INY
+    DEX
+    BNE loop2
+    RTS
+}

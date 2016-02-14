@@ -8,18 +8,24 @@ TEST_SHIFT=FALSE
 INCLUDE_FLOPPY=FALSE
 
 ;;; Used in the SD Build only
-_VIA_BASE=&FE60         ; Base Address of 6522 VIA
-_TUBE_BASE=&FEE0        ; Base Address of Tube
-_TURBOMMC=0             ; 1 = build for TurboMMC, and enable PB2-4 as outputs
+_VIA_BASE=&FE60                 ; Base Address of 6522 VIA
+_TUBE_BASE=&FEE0                ; Base Address of Tube
+_TURBOMMC=0                     ; 1 = build for TurboMMC, and enable PB2-4 as outputs
 
 TUBE_R3_DATA        = _TUBE_BASE + &05
 
-attempts%           = &C2EC
-sectorcount%        = &C2ED
-cardsort%           = &C2EE
-mmcstate%           = &C2EF
-cmdseq%             = &C2F0
+MAX_DRIVES          = 2         ; don't make this bigger than 2 or the drive table below will overflow
 
+attempts%           = &C2E9     ; 1 byte
+sectorcount%        = &C2EA     ; 1 byte
+cardsort%           = &C2EB     ; 1 byte
+mmcstate%           = &C2EC     ; 1 byte
+numdrives%          = &C2ED     ; 1 byte
+cmdseq%             = &C2F0     ; 8 bytes
+drivetable%         = &C2F8     ; 4 * MAX_DRIVES
+
+mbrsector%          = &C000     ; 512 bytes tmp storage before fs is mounted
+        
 datptr%             = &B2
 
 EscapeFlag          = &FF

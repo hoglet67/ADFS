@@ -228,7 +228,9 @@ write_block      =&58
 .setRandomAddress
 {
     PHX
-    LDA &C203,X    ;; MSB of sector number   
+    LDA #0         ;; MSB of sector number
+    PHA
+    LDA &C203,X
     PHA
     LDA &C202,X
     PHA
@@ -245,6 +247,8 @@ write_block      =&58
 .setCommandAddress
 {
     PHX
+    LDA #0          ;; MSB of sector number
+    PHA
     LDY #6          ;; Point to sector MSB in the control block
     LDX #3          ;; sector number is 3 bytes
 .loop
@@ -258,7 +262,42 @@ write_block      =&58
         
 .setAddressFromStack
 {
-     LDX #3          ;; sector number is 3 bytes
+;; Process the drive number
+     TSX
+     LDA &103, X    ;; Bits 7-5 are the drive number
+     PHA
+     ORA &C317      ;; Add in current drive
+     STA &C333      ;; Store for any error
+
+     CLC            ;; Shift into bits 0-2
+     ROL A
+     ROL A
+     ROL A
+     ROL A
+     AND #&07
+     CMP numdrives% ;; check against number of ADFS partitions found 
+     BCS invalidDrive
+
+     LSR A          ;; Shift into bits 4-2 to index the drive table
+     LSR A
+     TAY            ;; Y will be used to index the drive table
+
+     PLA            ;; Mask out the drive number, leaving just the MS sector
+     AND #&1F
+     STA &103, X
+
+     CLC
+.addDriveOffset
+     LDA &101, X
+     ADC drivetable%, Y
+     STA &101, X
+     INX
+     INY
+     TYA
+     AND #&03
+     BNE addDriveOffset 
+
+     LDX #3          ;; sector number is 4 bytes
 ;;
      LDA cardsort%   ;; Skip multiply for SDHC cards (cardsort = 01)
      CMP #2
@@ -273,19 +312,33 @@ write_block      =&58
      STA cmdseq%+1, X
      DEX
      BNE loop
-     STX cmdseq%+5   ;; LSB is always 0
+     STZ cmdseq%+5   ;; LSB is always 0
+     BCS overflow    ;; if carry is set, overflow has occurred
+     PLA             ;; if the MS byte of the original sector
+     BNE overflow    ;; was non zero, overflow has occurred
      PLX
      RTS
+
+.invalidDrive
+     JSR L8372        ;; Generate error
+     EQUB &A9         ;; ERR=169
+     EQUS "Invalid drive"
+     EQUB &00
+
+.overflow
+     JSR L8372        ;; Generate error
+     EQUB &A9         ;; ERR=169
+     EQUS "Sector overflow"
+     EQUB &00
 }
 
 .setCommandAddressSDHC
 {
 .loop                ;; for SDHC the command address is sectors
-     PLA
+     PLA             ;; copy directly to cmdseq%+2 ...cmdseq%+5
      STA cmdseq%+2, X
      DEX
-     BNE loop
-     STX cmdseq%+2   ;; MSB is always 0
+     BPL loop
      PLX
      RTS
 }
@@ -311,4 +364,95 @@ write_block      =&58
      INC cmdseq%+5
      BEQ incMS
      RTS
+}
+
+.initializeDriveTable
+{
+;; Load 512b sector 0 (MBR) to &C000-&C1FF
+;; Normally MBR resides here, but we do this before MBR is loaded
+;; We can't use OSWORD &72 to do this, as we don't want alternative bytes skipped
+     JSR MMC_BEGIN      ;; Initialize the card, if not already initialized
+     CLC                ;; C=0 for Read
+     JSR MMC_SetupRW
+     JSR MMC_StartRead
+     LDA #<mbrsector%
+     STA datptr%
+     LDA #>mbrsector%
+     STA datptr% + 1
+     JSR MMC_Read512
+     JSR MMC_16Clocks	;; ignore CRC
+
+     LDA mbrsector% + &1FE
+     CMP #&55
+     BNE noMBR
+     LDA mbrsector% + &1FF
+     CMP #&AA
+     BNE noMBR
+
+;; Partition entry 0 is 1BE
+;; Partition entry 1 is 1CE
+;; Partition entry 2 is 1DE
+;; Partition entry 3 is 1EE
+        
+;; Partition entry has following structure
+;; 00 = status (whether bootable)
+;; 01-03 = CHS address of first absolute sector in partition
+;; 04 = partition type (AD for ADFS)
+;; 05-07 = CHS address of last absolute sector in partition
+;; 08-0B = LBA of first absolute sector in partition
+;; 0C-0F = Number of sectors in partition
+
+     LDA #<(mbrsector% + &1BE)  ;; The start of the first partition entry
+     STA datptr%                ;; is offset &1BE into the MBR
+     LDA #>(mbrsector% + &1BE)
+     STA datptr%+1
+
+     LDX #(MAX_DRIVES * 4)      ;; Clear the drive table
+.loop
+     STZ drivetable% - 1, X     ;; all zeros is treated as an invalid drive
+     DEX
+     BNE loop
+     STZ numdrives%             ;; clear the number of drives
+        
+.testPartition
+     LDY #&04
+     LDA (datptr%),Y
+     CMP #&AD                   ;; ADFS = partition type AD
+     BNE nextPartition
+     INC numdrives%
+     LDY #&08
+.copyLBA
+     LDA (datptr%),Y            ;; Read the LBA from the partition entry
+     STA drivetable%, X         ;; Store it in the drive table
+     INX
+     INY
+     CPY #&0C
+     BNE copyLBA     
+     CPX #(MAX_DRIVES * 4)
+     BEQ done
+
+.nextPartition
+     CLC
+     LDA datptr%               ;; Move to the next partition entry
+     ADC #&10
+     STA datptr%
+     CMP #&FE                   ;; &FE = &BE + &10 * 4
+     BNE testPartition
+
+.done
+     CPX #0                     ;; Did we find any ADFS partitions?
+     BEQ noADFS                 ;; No, then fatal error
+     RTS
+
+.noMBR
+     JSR L8372
+     EQUB &CD
+     EQUS "No MBR!"
+     EQUB &00
+    
+.noADFS
+     JSR L8372
+     EQUB &CD
+     EQUS "No ADFS partitions!"
+     EQUB &00
 }

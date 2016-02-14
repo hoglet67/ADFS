@@ -4360,6 +4360,7 @@ ENDIF
        STZ &C2D7
 IF PATCH_SD
        STZ mmcstate%    ;; mark the mmc system as un-initialized
+       JSR initializeDriveTable
 ENDIF
        JSR L9A7F        ;; Get ADFS CMOS byte
        STA &C2D8        ;; Store in workspace
@@ -6696,7 +6697,7 @@ IF PATCH_SD
        LDA &BF
        STA &B3
        JSR MMC_StartRead
-       JSR MMC_Read512
+       JSR MMC_Read256
        JSR MMC_16Clocks	;; ignore CRC
        PLA
        STA &B3

@@ -46,13 +46,13 @@
 
 .SectorWrite
        JSR MMC_StartWrite
-       JSR MMC_Write512
+       JSR MMC_Write256
        JSR MMC_EndWrite
        BRA SectorNext
 
 .SectorRead
        JSR MMC_StartRead
-       JSR MMC_Read512
+       JSR MMC_Read256
        JSR MMC_16Clocks	;; ignore CRC
 
 .SectorNext             ;; Update command block to point to next sector
