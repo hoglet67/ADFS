@@ -278,8 +278,8 @@ write_block      =&58
      CMP numdrives% ;; check against number of ADFS partitions found 
      BCS invalidDrive
 
-     LSR A          ;; Shift into bits 4-2 to index the drive table
-     LSR A
+     ASL A          ;; Shift into bits 4-2 to index the drive table
+     ASL A
      TAY            ;; Y will be used to index the drive table
 
      PLA            ;; Mask out the drive number, leaving just the MS sector
