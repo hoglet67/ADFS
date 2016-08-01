@@ -10,6 +10,8 @@ acr% =_VIA_BASE + &0B
 ifr% =_VIA_BASE + &0D
 ier% =_VIA_BASE + &0E
 
+_SRMODE2 = 0
+        
 IF _TURBOMMC
    temp    = &cf
    ddrmask = &1F ;; 0001 1111
@@ -38,6 +40,7 @@ ENDIF
 ;; Write FF
 .MMC_GetByte
 .UP_ReadByteX
+IF _SRMODE2
 {
     JSR ShiftRegMode2
     LDA #4
@@ -48,6 +51,35 @@ ENDIF
     LDA sr%
     RTS
 }
+ELSE
+.WaitForShiftDone
+.WaitForShiftDoneNotLast        
+;; Test not using SRMode2
+    TXA
+    PHA
+    LDX #(1 + msbits)
+    LDA #(3 + msbits)
+    STX iorb%           ;;1
+    STA iorb%
+    STX iorb%           ;;2
+    STA iorb%
+    STX iorb%           ;;3
+    STA iorb%
+    STX iorb%           ;;4
+    STA iorb%
+    STX iorb%           ;;5
+    STA iorb%
+    STX iorb%           ;;6
+    STA iorb%
+    STX iorb%           ;;7
+    STA iorb%
+    STX iorb%           ;;8
+    STA iorb%
+    PLA
+    TAX
+    LDA sr%
+    RTS
+ENDIF
         
 ;; This is always entered with X and A with the correct values
 .UP_ReadBits7
@@ -173,7 +205,9 @@ ENDIF
     LDX #0
 
 .MMC_ReadX
+IF _SRMODE2
     JSR ShiftRegMode2
+ENDIF
     LDY #0
     BIT &CD
     BVS MMC_ReadToTube
@@ -340,6 +374,7 @@ ENDIF
 ;;
 ;; 22us/byte for &7000 bytes actually took 770ms.
 
+IF _SRMODE2
 .WaitForShiftDone
 {
     LDA #4            ;; Bit 2 of IFR is the Shift Reg Interrupt flag
@@ -367,6 +402,7 @@ ENDIF
     LDA sr%           ;; read the data byte, and clear the SR interrupt flag
     RTS
 }
+ENDIF
         
 .ShiftRegMode0
     LDA acr%   ;; Set SR Mode to mode 0
@@ -529,7 +565,9 @@ ENDIF
 ;; *** Read 512 byte sector to datptr
 .MMC_Read512
 {        
+IF _SRMODE2
     JSR ShiftRegMode2       
+ENDIF
     LDX #0
     LDY #0
 .loop1
