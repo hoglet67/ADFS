@@ -6530,6 +6530,11 @@ ELSE
        CMP #&F2
        BEQ LAB9B
 ENDIF
+
+;; This code is only used by the SCSI driver
+;; It's retained in the IDE case so binraries match those from JGH
+
+IF NOT(PATCH_SD)
 .LAB98 LDA #&05         ;; Return from service call
        RTS
 ;;
@@ -6543,6 +6548,8 @@ ENDIF
        ORA &FC40
        STA &C331
        JMP L9DB4        ;; Restore Y,X, claim call
+ENDIF
+
 ;;
 ;;
 ;; Check for data loss
