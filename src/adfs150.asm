@@ -105,18 +105,18 @@ IF PATCH_SD
 ;; Drive status is not used in the SD Code
 ELIF PATCH_IDE
 .L806F PHP
-.L8070 LDA &FC47        ;; Get IDE status
+.L8070 LDA HDBASE+7     ;; Get IDE status
        STA &CC          ;; Save this value
-       LDA &FC47        ;; Get ISE status
+       LDA HDBASE+7     ;; Get ISE status
        CMP &CC          ;; Compare with previous status
        BNE L8070        ;; Loop until status stays same
        PLP
        RTS
 ELSE
 .L806F PHP
-.L8070 LDA &FC41        ;; Get SCSI status
+.L8070 LDA HDBASE+1     ;; Get SCSI status
        STA &CC          ;; Save this value
-       LDA &FC41        ;; Get SCSI status
+       LDA HDBASE+1     ;; Get SCSI status
        CMP &CC          ;; Compare with previous status
        BNE L8070        ;; Loop until status stays same
        PLP
@@ -145,7 +145,7 @@ ELIF PATCH_IDE
        AND #&01
        RTS
 .WaitForData
-       LDA &FC47        ;;  Loop until data ready
+       LDA HDBASE+7     ;;  Loop until data ready
        BIT #8
        BEQ WaitForData
        RTS
@@ -161,8 +161,8 @@ ELSE
        AND #&02         ;; BUSY?
        BNE L8083        ;; Loop until not BUSY
        PLA              ;; Get data value back
-       STA &FC40        ;; Write to SCSI data
-       STA &FC42        ;; Write to SCSI select to strobe it
+       STA HDBASE       ;; Write to SCSI data
+       STA HDBASE+2     ;; Write to SCSI select to strobe it
 .L8091 JSR L806F        ;; Get SCSI status
        AND #&02         ;; BUSY?
        BEQ L8091        ;; Loop until not BUSY
@@ -378,20 +378,20 @@ ELIF PATCH_IDE
        BCC IORead
 .IOWrite
        LDA (&80),Y
-       STA &FC40
+       STA HDBASE
        BRA TransferByte
 .IORead
-       LDA &FC40
+       LDA HDBASE
        STA (&80),Y
        BRA TransferByte
 .TransTube
        BCC TubeRead
 .TubeWrite
        LDA &FEE5
-       STA &FC40
+       STA HDBASE
        BRA TransferByte
 .TubeRead
-       LDA &FC40
+       LDA HDBASE
        STA &FEE5
        BRA TransferByte
 .CommandDone
@@ -410,7 +410,7 @@ ELIF PATCH_IDE
        DEX
        BNE Twice        ;; Second pass to do real transfer
        INC &81
-       LDA &FC47
+       LDA HDBASE+7
        AND #&21
        BNE TransDone    ;; Error occured
        INC &C228
@@ -444,8 +444,8 @@ ELIF PATCH_IDE
 .SetGeometry
        JSR WaitNotBusy
        LDA #64          ;; 64 sectors per track
-       STA &FC42
-       STA &FC43
+       STA HDBASE+2
+       STA HDBASE+3
        LDY #6           ;; Get drive number
        LDA (&B0),Y
        LSR A
@@ -501,10 +501,10 @@ ELSE
 ;;
 ;;                                         I/O write
        LDA (&B2),Y      ;; Get byte from memory
-       STA &FC40        ;; Write to SCSI data port
+       STA HDBASE       ;; Write to SCSI data port
        BRA L8193        ;; Jump to update address
 ;;
-.L818E LDA &FC40        ;; Read byte from SCSI data port
+.L818E LDA HDBASE       ;; Read byte from SCSI data port
        STA (&B2),Y      ;; Store byte in memory
 .L8193 INY              ;; Point to next byte
        BNE L817C        ;; Loop for 256 bytes
@@ -513,23 +513,23 @@ ELSE
 ;;
 .L819B BCS L81A5        ;; Jump for Tube read
        LDA &FEE5        ;; Get byte from Tube
-       STA &FC40        ;; Write byte to SCSI data port
+       STA HDBASE       ;; Write byte to SCSI data port
        BRA L817C        ;; Loop for next byte
 ;;
-.L81A5 LDA &FC40        ;; Get byte from SCSI data port
+.L81A5 LDA HDBASE       ;; Get byte from SCSI data port
        STA &FEE5        ;; Write to Tube
        BRA L817C        ;; Loop for next byte
 ;;
 .L81AD JSR L803A        ;; Release Tube and restore screen
 .L81B0 JSR L8332        ;; Wait for SCSI data ready
-       LDA &FC40        ;; Get result byte
+       LDA HDBASE       ;; Get result byte
        JSR L8332        ;; Wait for SCSI data ready
        TAY              ;; Save result
        JSR L806F        ;; Get SCSI status
        AND #&01
        BEQ L81B0        ;; Loop to try to get result again
        TYA              ;; Get result back
-       LDX &FC40        ;; Get second result byte
+       LDX HDBASE       ;; Get second result byte
        BEQ L81CA        ;; OK, jump to return result
        JMP L82A5        ;; Return result=&7F
 ;;
@@ -566,13 +566,13 @@ ELSE
        BMI L81AD
        BVS L81F4
 .L81E8 LDA (&B2),Y
-       STA &FC40
+       STA HDBASE
        INY
        BNE L81E8
        INC &B3
        BRA L81E1
 ;;
-.L81F4 LDA &FC40
+.L81F4 LDA HDBASE
        STA (&B2),Y
        INY
        BNE L81F4
@@ -603,15 +603,15 @@ ELIF PATCH_IDE
        JSR WaitNotBusy  ;; Save CC/CS Read/Write
        LDY #8
        LDA #1           ;; One sector
-       STA &FC42
+       STA HDBASE+2
        CLC              ;; Set sector b0-b5
        LDA (&B0),Y
        AND #63
        ADC #1
-       STA &FC43
+       STA HDBASE+3
        DEY              ;; Set sector b8-b15
        LDA (&B0),Y
-       STA &FC44
+       STA HDBASE+4
        DEY              ;; Set sector b16-b21
        LDA (&B0),Y
        JSR SetCylinder
@@ -639,7 +639,7 @@ ELIF PATCH_IDE
        LDY #0           ;; Set command &08 or &0A
        PLP
 .SetCmd
-       STA &FC47
+       STA HDBASE+7
        RTS
 .SetDrive
        ROL A            ;; Move into position
@@ -647,12 +647,12 @@ ELIF PATCH_IDE
        ROL A
 .SetDriveA
        AND #&13         ;; Set device + sector b6-b7
-       STA &FC46
+       STA HDBASE+6
        RTS
 .SetCylinder
        PHA              ;; Set sector b16-b21
        AND #&3F
-       STA &FC45
+       STA HDBASE+5
        PLA              ;; Get Drive 0-1/2-3 into b1
        ROL A
        ROL A
@@ -669,10 +669,10 @@ ELIF PATCH_IDE
        PHP
        BRA SetCommand
 .GetResult
-       LDA &FC47        ;; Get IDE result
+       LDA HDBASE+7     ;; Get IDE result
        AND #&21
        BEQ GetResOk
-       LDA &FC41        ;; Get IDE error code, CS already set
+       LDA HDBASE+1     ;; Get IDE error code, CS already set
        LDX #&FF
 .GetResLp
        INX              ;; Translate result code
@@ -701,7 +701,7 @@ ELSE
        NOP
        NOP
        LDA &FEE5
-       STA &FC40
+       STA HDBASE
        INY
        BNE L8233
        JSR L8200
@@ -714,7 +714,7 @@ ELSE
 .L824B NOP
        NOP
        NOP
-       LDA &FC40
+       LDA HDBASE
        STA &FEE5
        INY
        BNE L824B
@@ -737,7 +737,7 @@ ELSE
        DEY
        BPL L826F        ;; Send 4 zeros: sends &03 dd &00 &00 &00 &00
 .L8275 JSR L8332        ;; Wait for SCSI
-       LDA &FC40        ;; Get byte from SCSI
+       LDA HDBASE       ;; Get byte from SCSI
        STA &C2D0,X      ;; Store in error block
        DEX
        BPL L8275        ;; Loop to fetch four bytes, err, sec.hi, sec.mid, sec.lo
@@ -747,9 +747,9 @@ ELSE
        STA &C2D2
        JSR L8332        ;; Wait for SCSI
        LDX &C2D3        ;; Get returned error number
-       LDA &FC40        ;; Get a byte from SCSI
+       LDA HDBASE       ;; Get a byte from SCSI
        JSR L8332        ;; Wait for SCSI
-       LDY &FC40        ;; Get another byte from SCSI
+       LDY HDBASE       ;; Get another byte from SCSI
        BNE L82A5        ;; Second byte is non-zero, jump to return &7F
        AND #&02         ;; Test bit 1 of first byte
        BNE L82A5        ;; If set, jump to return &7F
@@ -872,7 +872,7 @@ ENDIF
 IF NOT(PATCH_SD)        ;; Called only from Floppy and IDE code, not SD code
 .L833E JSR L8332        ;; Wait until SCSI OR IDE ready
        BVS L8349
-       STA &FC40        ;; This works because the SCSI command register is shared
+       STA HDBASE       ;; This works because the SCSI command register is shared
        LDA #&00
        RTS
 ;;
@@ -2040,7 +2040,7 @@ ELSE
 .L8B9B LDY #&00         ;; Fetch 256 bytes
        JSR L8332        ;; Wait for SCSI ready
        BMI L8BBB        ;; Jump ahead if switched to write
-.L8BA2 LDA &FC40        ;; Get byte from SCSI
+.L8BA2 LDA HDBASE       ;; Get byte from SCSI
        CPX #&00         ;; No more bytes left?
        BEQ L8BB8        ;; Jump to ignore extra bytes
        BIT &CD          ;; Tube or I/O?
@@ -4075,7 +4075,7 @@ IF PATCH_SD
 .L9A6C LDA #0           ;; EQ - present
        RTS
 ELIF PATCH_IDE
-.L9A6C LDA &FC47        ;; &FF - absent, <>&FF - present
+.L9A6C LDA HDBASE+7     ;; &FF - absent, <>&FF - present
        INC A            ;; &00 - absent, <>&00 - present
        BEQ DriveNotPresent
        LDA #0           ;; EQ - present
@@ -4084,17 +4084,17 @@ ELIF PATCH_IDE
        DEC A
        RTS
        EQUB &FC         ;; Junk - so a binary compare will pass
-       STZ &FC43        ;; Junk - so a binary compare will pass
-       CMP &FC40        ;; Junk - so a binary compare will pass
+       STZ HDBASE+3     ;; Junk - so a binary compare will pass
+       CMP HDBASE       ;; Junk - so a binary compare will pass
        RTS              ;; Junk - so a binary compare will pass
 ELSE
 .L9A6C LDA #&5A
        JSR L9A75
        BNE L9A7E
        LDA #&A5
-.L9A75 STA &FC40
-       STZ &FC43
-       CMP &FC40
+.L9A75 STA HDBASE
+       STZ HDBASE+3
+       CMP HDBASE
 .L9A7E RTS
 ENDIF
 ;;
@@ -6367,14 +6367,14 @@ ELIF PATCH_IDE
        JSR L8328        ;; Wait for ensuring to complete
        JSR WaitNotBusy
        LDA #1           ;; one sector
-       STA &FC42
+       STA HDBASE+2
        CLC
        LDA &C201,X      ;; Set sector b0-b5
        AND #63
        ADC #1
-       STA &FC43
+       STA HDBASE+3
        LDA &C202,X      ;; Set sector b8-b15
-       STA &FC44
+       STA HDBASE+4
        LDA &C203,X      ;; Set sector b16-b21
        STA &C333
        JMP SetRandom
@@ -6489,7 +6489,7 @@ IF PATCH_SD
        STA &B2
 ELSE
 .LAB76 LDA (&BC),Y      ;; Get byte from buffer
-       STA &FC40        ;; Send to SCSI
+       STA HDBASE       ;; Send to SCSI
        INY
        BNE LAB76        ;; Loop for 256 bytes
 ENDIF
@@ -6501,7 +6501,7 @@ IF PATCH_IDE OR PATCH_SD
        NOP
        NOP
 ELSE
-       STY &FC43        ;; Set &FC43 to &FF
+       STY HDBASE+3     ;; Set HDBASE+3 to &FF
 ENDIF
 .LAB86 LDX &C1
 .LAB88 RTS
@@ -6540,12 +6540,12 @@ IF NOT(PATCH_SD)
 ;;
 .LAB9B PHY              ;; Send something to SCSI
        LDA #&00
-       STA &FC43
+       STA HDBASE+3
        LDA #&01
        TRB &CD
-       LDA &FC40
+       LDA HDBASE
        JSR L8332
-       ORA &FC40
+       ORA HDBASE
        STA &C331
        JMP L9DB4        ;; Restore Y,X, claim call
 ENDIF
@@ -6712,7 +6712,7 @@ IF PATCH_SD
        STA &B2
        ;; TODO Add error handling
 ELSE
-.LACCD LDA &FC40        ;; Get byte from SCSI
+.LACCD LDA HDBASE       ;; Get byte from SCSI
        STA (&BE),Y      ;; Store to buffer
        INY
        BNE LACCD        ;; Loop for 256 bytes
