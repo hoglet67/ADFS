@@ -1994,7 +1994,7 @@ ENDIF
 IF PATCH_SD
        JSR MMC_BEGIN    ;; Initialize the card, if not already initialized
        CLC              ;; C=0 for reads
-       JSR MMC_SetupRW  ;; Setup SD card command block        
+       JSR MMC_SetupRW  ;; Setup SD card command block
        JSR setCommandAddress
 ELIF PATCH_IDE
        PHX             ;; Load a partial sector
@@ -4956,9 +4956,9 @@ ENDIF
 IF PATCH_SD
        ;; The next set of strings must not straddle a page boundary
        ;; because code assumes the MSB is constant. See code at
-       ;; .L9283 
+       ;; .L9283
        IF  ((P% AND &FF) > &B1)
-               ORG ((P% + &FF) AND &FF00) 
+               ORG ((P% + &FF) AND &FF00)
        ENDIF
 ENDIF
 .L9FB1 EQUS "<List Spec>"
@@ -6360,8 +6360,8 @@ IF PATCH_SD
        PHP
        JSR MMC_BEGIN    ;; Initialize the card, if not already initialized
        PLP
-       JSR MMC_SetupRW  ;; Setup SD card command block        
-       JMP setRandomAddress ;; Set the sector addess from &C201,X .. &C203,X        
+       JSR MMC_SetupRW  ;; Setup SD card command block
+       JMP setRandomAddress ;; Set the sector addess from &C201,X .. &C203,X
 ELIF PATCH_IDE
 .LAAD9 PHA
        JSR L8328        ;; Wait for ensuring to complete
@@ -6687,7 +6687,7 @@ ELSE
        BMI LACD5        ;; If SCSI writing, finish
 ENDIF
        LDY #&00
-IF PATCH_SD     
+IF PATCH_SD
 .LACCD LDA &B2
        PHA
        LDA &B3
@@ -6704,7 +6704,7 @@ IF PATCH_SD
        PLA
        STA &B2
        ;; TODO Add error handling
-ELSE        
+ELSE
 .LACCD LDA &FC40        ;; Get byte from SCSI
        STA (&BE),Y      ;; Store to buffer
        INY
