@@ -22,7 +22,12 @@ ELIF PATCH_IDE
 ELSE
        EQUB &50         ;; Binary version number
 ENDIF
+
+IF PATCH_IDFS
+       EQUS "Acorn IDFS" ;; IDFS title
+ELSE
        EQUS "Acorn ADFS" ;;ROM Title
+ENDIF
        EQUB &00
 IF PATCH_SD
        EQUS "157"       ;; Version string
@@ -119,6 +124,10 @@ ELSE
        LDA HDBASE+1     ;; Get SCSI status
        CMP &CC          ;; Compare with previous status
        BNE L8070        ;; Loop until status stays same
+IF PATCH_IDFS
+       EOR #&10         ;; As per VFS  CRUCIAL - BREAKS BPUT OTHERWISE
+       AND #&FB         ;; As per VFS  CRUCIAL - BREAKS BPUT OTHERWISE
+ENDIF
        PLP
        RTS
 ENDIF
@@ -161,6 +170,9 @@ ELSE
        AND #&02         ;; BUSY?
        BNE L8083        ;; Loop until not BUSY
        PLA              ;; Get data value back
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus   NECESSARY - IN VFS
+ENDIF
        STA HDBASE       ;; Write to SCSI data
        STA HDBASE+2     ;; Write to SCSI select to strobe it
 .L8091 JSR L806F        ;; Get SCSI status
@@ -290,6 +302,14 @@ ENDIF
 .L8111 LDY #&06
        LDA (&B0),Y      ;; Get drive
        ORA &C317        ;; OR with current drive
+       
+IF PATCH_IDFS
+       CMP #&FF         :\                                    ;; In VFS but probably not necessary
+       BNE skipinc        :\ If drive<>&FF, use it            ;; In VFS but probably not necessary
+       INC A            :\ Change drive &FF to &00            ;; In VFS but probably not necessary
+.skipinc
+ENDIF
+       
 IF INCLUDE_FLOPPY
        BMI L80F0        ;; Jump back with 4,5,6,7 as floppies
 ENDIF
@@ -501,6 +521,9 @@ ELSE
 ;;
 ;;                                         I/O write
        LDA (&B2),Y      ;; Get byte from memory
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus  *** NECESSARY - in VFS
+ENDIF
        STA HDBASE       ;; Write to SCSI data port
        BRA L8193        ;; Jump to update address
 ;;
@@ -513,6 +536,9 @@ ELSE
 ;;
 .L819B BCS L81A5        ;; Jump for Tube read
        LDA &FEE5        ;; Get byte from Tube
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus  *** NECESSARY - in VFS
+ENDIF
        STA HDBASE       ;; Write byte to SCSI data port
        BRA L817C        ;; Loop for next byte
 ;;
@@ -541,7 +567,11 @@ ELSE
 .L81D2 LDA #&00         ;; A=0 - OK
 .L81D4 LDX &B0          ;; Restore XY pointer
        LDY &B1
+IF PATCH_IDFS
+       AND #&FF         ;; As per VFS
+ELSE
        AND #&7F         ;; Lose bit 7
+ENDIF
        RTS              ;; Return with result in A
 ;;
 ;;
@@ -566,6 +596,9 @@ ELSE
        BMI L81AD
        BVS L81F4
 .L81E8 LDA (&B2),Y
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus                      **** NECESSARY - CONFIRMED IN VFS (L8193)***
+ENDIF
        STA HDBASE
        INY
        BNE L81E8
@@ -701,6 +734,9 @@ ELSE
        NOP
        NOP
        LDA &FEE5
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus                    **** NECESSARY - IN VFS
+ENDIF
        STA HDBASE
        INY
        BNE L8233
@@ -738,6 +774,9 @@ ELSE
        BPL L826F        ;; Send 4 zeros: sends &03 dd &00 &00 &00 &00
 .L8275 JSR L8332        ;; Wait for SCSI
        LDA HDBASE       ;; Get byte from SCSI
+IF PATCH_IDFS
+;;       EOR #&FF         ;; Invert byte when using internal bus                    **** NOT IN VFS (inverts disc errors and sector numbers)
+ENDIF
        STA &C2D0,X      ;; Store in error block
        DEX
        BPL L8275        ;; Loop to fetch four bytes, err, sec.hi, sec.mid, sec.lo
@@ -872,6 +911,9 @@ ENDIF
 IF NOT(PATCH_SD)        ;; Called only from Floppy and IDE code, not SD code
 .L833E JSR L8332        ;; Wait until SCSI OR IDE ready
        BVS L8349
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus                                                *** NECESSARY - IN VFS
+ENDIF
        STA HDBASE       ;; This works because the SCSI command register is shared
        LDA #&00
        RTS
@@ -915,12 +957,21 @@ ENDIF
        LDA #&20
        STA &0100,Y
        TXA
+;;IF PATCH_IDFS
+;;       CMP #&50      ;; Channel guesswork
+;;ELSE
        CMP #&30
+;;ENDIF
        BCS L839B
 .L8395 JSR L8451
        JMP L83A2
 ;;
-.L839B CMP #&3A
+.L839B 
+;;IF PATCH_IDFS
+;;       CMP #&5A      ;; Channel guesswork
+;;ELSE
+         CMP #&3A
+;;ENDIF
        BCS L8395
        JSR L846D
 .L83A2 LDX #&04
@@ -1077,10 +1128,18 @@ ENDIF
 ;;
 ;; Close Spool or Exec if ADFS channel
 ;; -----------------------------------
-.L84CB CMP #&30         ;; Check against lowest ADFS handle
+.L84CB 
+IF PATCH_IDFS
+       CMP #&50         ;; Check against lowest IDFS handle
+       BCC L84BC        ;; Exit if not IDFS
+       CMP #&5A         ;; Check against highest IDFS handle
+       BCS L84BC        ;; Exit if not IDFS
+ELSE
+       CMP #&30         ;; Check against lowest ADFS handle
        BCC L84BC        ;; Exit if not ADFS
        CMP #&3A         ;; Check against highest ADFS handle
        BCS L84BC        ;; Exit if not ADFS
+ENDIF
 .L84D3 LDY #>L84BD      ;; Point to *Spool or *Exec
        JMP &FFF7        ;; Jump to close via MOS
 ;;
@@ -2041,6 +2100,9 @@ ELSE
        JSR L8332        ;; Wait for SCSI ready
        BMI L8BBB        ;; Jump ahead if switched to write
 .L8BA2 LDA HDBASE       ;; Get byte from SCSI
+IF PATCH_IDFS
+;;       EOR #&FF         ;; Invert byte when using internal bus                    *** NOT IN VFS (Breaks >16K transfers)
+ENDIF
        CPX #&00         ;; No more bytes left?
        BEQ L8BB8        ;; Jump to ignore extra bytes
        BIT &CD          ;; Tube or I/O?
@@ -4092,7 +4154,15 @@ ELSE
        JSR L9A75
        BNE L9A7E
        LDA #&A5
-.L9A75 STA HDBASE
+.L9A75
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus  *** NECESSARY - BUT ::: confirmed in VFS  **AFTER** label in previous JSR instruction)
+ENDIF
+ 
+       STA HDBASE
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus (n.b. VFS re-inverts at this point)  *** NECESSARY - confirmed in VFS
+ENDIF
        STZ HDBASE+3
        CMP HDBASE
 .L9A7E RTS
@@ -4133,8 +4203,12 @@ ENDIF
 .L9A94 EQUS "$.!BOOT"   ;; End of *Load and *Run option
        EQUB &0D
 ;;
-.L9A9C EQUS "E.-ADFS-$.!BOOT"
-                        ;; *Exec option
+.L9A9C 
+IF PATCH_IDFS
+       EQUS "E.-IDFS-$.!BOOT" 
+ELSE
+       EQUS "E.-ADFS-$.!BOOT"  ;; *Exec option
+ENDIF
        EQUB &0D
 ;;
 ;;
@@ -4289,12 +4363,22 @@ ENDIF
 ;;
 ;; Select ADFS
 ;; ===========
-.L9B4A LDY #&08         ;; Y=8 to select ADFS
+.L9B4A 
+IF PATCH_IDFS
+       LDY #&0A         ;; Y=10 to select IDFS
+ELSE
+       LDY #&08         ;; Y=8 to select ADFS
+ENDIF
 ;;
 ;;
 ;; Serv12 - Select filing system
 ;; =============================
-.L9B4C CPY #&08
+.L9B4C
+IF PATCH_IDFS
+       CPY #&0A
+ELSE
+       CPY #&08
+ENDIF
        BNE L9B49        ;; No, quit
        PHY
        PHY
@@ -4310,11 +4394,21 @@ ENDIF
        INX              ;; No key pressed?
        BEQ L9B74        ;; Yes, jump to select FS
        DEX
-       CPX #&79         ;; '->' pressed?
+IF NOT(PATCH_IDFS)
+       CPX #&79         ;; '->' pressed?  ;; Only for ADFS
        BEQ L9B74        ;; Yes
+ENDIF
+IF PATCH_IDFS
+       CPX #&25         ;; 'I' pressed?
+ELSE
        CPX #&41         ;; 'A' pressed?
+ENDIF
        BEQ L9B74        ;; Yes
+IF PATCH_IDFS
+       CPX #&45         ;; 'J' pressed?
+ELSE
        CPX #&43         ;; 'F' pressed?
+ENDIF
        BEQ L9B72        ;; Yes, jump to select FS
        PLA
        TAY              ;; Restore Boot flag
@@ -4341,10 +4435,18 @@ ELSE
 ENDIF
        BEQ L9B85        ;; Jump forward if soft BREAK
        PLA              ;; With Hard BREAK and power on
+IF PATCH_IDFS
+       LDA #&45         ;; ...change key pressed to 'jidfs'
+ELSE
        LDA #&43         ;; ...change key pressed to 'fadfs'
+ENDIF
        PHA
 .L9B85 JSR L92A8        ;; Print FS banner
+IF PATCH_IDFS
+       EQUS "Acorn IDFS", &0D, &8D
+ELSE
        EQUS "Acorn ADFS", &0D, &8D
+ENDIF       
 ;;
 ;; Select ADFS
 ;; ===========
@@ -4411,7 +4513,11 @@ ENDIF
        LDA #&20
        TSB &CD          ;; Signal hard drive present
 .L9C10 PLA              ;; Get selection flag from stack
+IF PATCH_IDFS
+       CMP #&45         ;; '*jidfs'/J-Break type of selection?
+ELSE
        CMP #&43         ;; '*fadfs'/F-Break type of selection?
+ENDIF
        BNE L9C18        ;; No, jump to keep context
        JSR L849A        ;; Set context to &FFFFFFFF when *fadfs
 .L9C18 LDY #&03         ;; Copy current context to backup context
@@ -4554,11 +4660,24 @@ ENDIF
 ;;
 ;; Filing system information
 ;; -------------------------
-.L9CFA EQUB &08         ;; Filing system number
+.L9CFA 
+IF PATCH_IDFS
+       EQUB &0A         ;; Filing system number (as VFS)
+       EQUB &59         ;; Highest handle used (as VFS)
+       EQUB &50         ;; Lowest handle used (as VFS)
+       
+ELSE
+       EQUB &08         ;; Filing system number
        EQUB &39         ;; Highest handle used
        EQUB &30         ;; Lowest handle used
+ENDIF
        EQUS "    "
-.L9D01 EQUS "sfda"      ;; "adfs" filing system name
+.L9D01
+IF PATCH_IDFS
+       EQUS "sfdi"      ;; "idfs" filing system name
+ELSE
+       EQUS "sfda"      ;; "adfs" filing system name
+ENDIF
 ;;
 ;; Serv26 - *SHUT
 ;; ==============
@@ -4586,10 +4705,18 @@ ENDIF
        PHA
        LDA (&F2),Y      ;; Get first character
        ORA #&20         ;; Force to lower case
+IF PATCH_IDFS
+       CMP #&6A         ;; Is it 'j' of 'jidfs'?
+ELSE
        CMP #&66         ;; Is it 'f' of 'fadfs'?
+ENDIF
        BNE L9D34        ;; No, jump past
        PLA              ;; Lose previos flag
+IF PATCH_IDFS
+       LDA #&45         ;; Change flags to indicate '*jidfs'
+ELSE
        LDA #&43         ;; Change flags to indicate '*fadfs'
+ENDIF
        PHA
        INY              ;; Point to next character
 .L9D34 LDX #&03         ;; 'adfs' is 3+1 characters
@@ -4626,9 +4753,17 @@ ENDIF
 ;; ====================
 .L9D5E PHY              ;; Save Y
        LDA &EF          ;; Get OSWORD number
+IF PATCH_IDFS
+       CMP #&60         ;; VFS OSWORD base
+ELSE
        CMP #&70
+ENDIF
        BCC L9DBA        ;; If <&70, exit unclaimed
+IF PATCH_IDFS
+       CMP #&64         ;; VFS highest OSWORD number (n.b. VFS also supports OSWORD &64 - not yet implemented here)
+ELSE
        CMP #&74
+ENDIF
        BCS L9DBA        ;; If >&73, exit unclaimed
 ;;
 ;; The following code is VERY annoying, as it means that if you call the
@@ -4639,15 +4774,23 @@ ENDIF
        LDA #&00
        TAY
        JSR &FFDA        ;; Get current filing system
+IF PATCH_IDFS
+       CMP #&0A         ;; Is is IDFS?
+ELSE
        CMP #&08         ;; Is is ADFS?
+ENDIF
        BEQ L9D76        ;; Yes, jump to continue
        JSR L9B4A        ;; Select ADFS if ADFS not selected
 .L9D76 LDA &EF          ;; Get OSWORD number
+IF PATCH_IDFS
+       CMP #&62         ;; Is it &62?
+ELSE
        CMP #&72         ;; Is if &72?
+ENDIF
        BNE L9DC0        ;; No, jump ahead
 ;;
 ;;
-;; OSWORD &72 - SCSI Device Access (Sector Read/Write)
+;; OSWORD &72 - SCSI Device Access (Sector Read/Write) (&62 for IDFS)
 ;; ===================================================
        LDA &F0          ;; Copy block pointer to &BA/B
        STA &BA
@@ -4679,7 +4822,11 @@ ENDIF
 ;;   &C224 15
 ;;
        LDA &C21A        ;; Get command
+IF PATCH_IDFS
+       AND #&1D         ;; As per VFS
+ELSE
        AND #&FD         ;; Mask out bit 1
+ENDIF
        CMP #&08         ;; Is it &08 or &0A, Read or Write?
        BEQ L9DA8        ;; Jump forward with Read and Write
 ;;
@@ -4699,6 +4846,7 @@ ENDIF
 ;; ---------------------------------
 .L9DB0 LDY #&00         ;; Point to result byte
        STA (&BA),Y      ;; Store result in control block
+       
 .L9DB4 LDX &F4          ;; Put ROM number in X
        PLY              ;; Restore Y
        LDA #&00         ;; A=0 to claim OSWORD
@@ -4712,7 +4860,12 @@ ENDIF
        RTS
 ;;
 ;;
-.L9DC0 CMP #&73
+.L9DC0
+IF PATCH_IDFS
+       CMP #&63
+ELSE
+       CMP #&73
+ENDIF
        BNE L9DD0
        LDY #&04
 .L9DC6 LDA &C2D0,Y
@@ -4720,7 +4873,12 @@ ENDIF
        DEY
        BPL L9DC6
        BMI L9DB4
-.L9DD0 CMP #&70
+.L9DD0 
+IF PATCH_IDFS
+       CMP #&60
+ELSE
+       CMP #&70
+ENDIF
        BNE L9DE3
        LDA &C8FA
        LDY #&00
@@ -4730,7 +4888,12 @@ ENDIF
        STA (&F0),Y
        JMP L9DB4
 ;;
-.L9DE3 CMP #&71
+.L9DE3
+IF PATCH_IDFS
+       CMP #&61
+ELSE
+       CMP #&71
+ENDIF       
        BNE L9DBA
        JSR LA1EA
        LDY #&03
@@ -4745,6 +4908,8 @@ IF PATCH_SD
        EQUS &0D, "Advanced DFS 1.57", &8D
 ELIF PATCH_IDE
        EQUS &0D, "Advanced DFS 1.53", &8D
+ELIF PATCH_IDFS
+       EQUS &0D, "Internal ADFS 1.50", &8D
 ELSE
        EQUS &0D, "Advanced DFS 1.50", &8D
 ENDIF
@@ -4756,7 +4921,11 @@ ENDIF
        BCS L9E3E
        JSR L9DF6
        JSR L92A8
+IF PATCH_IDFS
+       EQUS "  IDFS", &8D
+ELSE
        EQUS "  ADFS", &8D
+ENDIF
 .L9E22 PLA
        TAY
        LDX &F4
@@ -4978,8 +5147,15 @@ ENDIF
 ;;
 ;; FSC 7 - Handle Request
 ;; ======================
-.L9FFC LDX #&30         ;; Lowest handle=&30
+.L9FFC 
+
+IF PATCH_IDFS
+       LDX #&50         ;; Lowest handle=&50 (as VFS)
+       LDY #&59         ;; Highest handle=&59 (as VFS)
+ELSE
+       LDX #&30         ;; Lowest handle=&30
        LDY #&39         ;; Highest handle=&39
+ENDIF
        RTS
 ;;
 ;; FSC 0 - *OPT
@@ -5020,10 +5196,17 @@ ENDIF
        LDA #&C7
        LDY #&00
        JSR L84C6
+;;IF PATCH_IDFS
+;;       CPX #&50             ;; file handle guesswork
+;;       BCC LA053
+;;       CPX #&5A
+;;       BCS LA053
+;;ELSE
        CPX #&30
        BCC LA053
        CPX #&3A
        BCS LA053
+;;ENDIF       
        JSR &FFF4
        LDX #&00
 .LA053 PLA
@@ -5153,7 +5336,11 @@ ENDIF
        BNE LA16F
        CLC
        TXA
+IF PATCH_IDFS
+       ADC #&50             ;; Add to base channel number
+ELSE
        ADC #&30
+ENDIF
        TAY
        LDA #&00
        JSR LB213
@@ -6172,7 +6359,11 @@ ENDIF
        BNE LA9A8        ;; Jump with OSARGS Y<>0, info on channel
        TAY
        BNE LA984        ;; Jump with OSARGS Y=0, info on filing system
-       LDA #&08         ;; OSARGS 0,0 - return filing system number
+IF PATCH_IDFS
+       LDA #&0A         ;; OSARGS 0,0 - return filing system number (&A)
+ELSE
+       LDA #&08         ;; OSARGS 0,0 - return filing system number (&8)
+ENDIF
 .LA983 RTS
 ;;
 ;; OSARGS Y=0 - Info on filing system
@@ -6489,6 +6680,9 @@ IF PATCH_SD
        STA &B2
 ELSE
 .LAB76 LDA (&BC),Y      ;; Get byte from buffer
+IF PATCH_IDFS
+       EOR #&FF         ;; Invert byte when using internal bus    **** NOT IN VFS BUT REQUIRED FOR IDFS OTHERWISE BPUT BYTES INVERTED ****
+ENDIF
        STA HDBASE       ;; Send to SCSI
        INY
        BNE LAB76        ;; Loop for 256 bytes
@@ -6673,6 +6867,9 @@ IF INCLUDE_FLOPPY
        BEQ LACB5
 ENDIF
        LDA &C203,X
+IF PATCH_IDFS
+       AND #&7F                           ;;;    Not in VFS but needed to make BPUT/BGET with drive >3 work
+ENDIF
        BPL LACC1
 IF INCLUDE_FLOPPY
 .LACB5 JSR LBA54
@@ -6753,11 +6950,19 @@ ENDIF
 ;; -----------------------------------
 .LAD0D STY &C2          ;; Save channel
        STY &C2D5
+IF PATCH_IDFS
+       CPY #&5A         ;; Check channel is in range
+ELSE
        CPY #&3A         ;; Check channel is in range
+ENDIF
        BCS LACF8        ;; Too high - error
        TYA
        SEC
+IF PATCH_IDFS 
+       SBC #&50
+ELSE
        SBC #&30
+ENDIF
        BCC LACF8        ;; Too low - error
        STA &CF          ;; Store channel offset
        TAX
@@ -7460,7 +7665,11 @@ ENDIF
        STA &C3AC,X
        TXA
        CLC
+IF PATCH_IDFS       
+       ADC #&50      ;; Add base channel number
+ELSE
        ADC #&30
+ENDIF
        PHA
        JSR LB19C
        PLA
@@ -7560,7 +7769,11 @@ ENDIF
 ;; -----------------------------
 .LB3F7 TXA
        CLC
+IF PATCH_IDFS
+       ADC #&50         ;; A=channel number for this offset
+ELSE
        ADC #&30         ;; A=channel number for this offset
+ENDIF
        STA &B5
        STX &CF          ;; Save X
        JSR LB409        ;; Close this channel
