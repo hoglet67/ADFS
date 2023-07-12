@@ -25,6 +25,8 @@ ENDIF
 
 IF PATCH_IDFS
        EQUS "Acorn IDFS" ;; IDFS title
+ELIF PATCH_XDFS
+       EQUS "Acorn XDFS" ;; XDFS title
 ELSE
        EQUS "Acorn ADFS" ;;ROM Title
 ENDIF
@@ -1134,6 +1136,12 @@ IF PATCH_IDFS
        BCC L84BC        ;; Exit if not IDFS
        CMP #&5A         ;; Check against highest IDFS handle
        BCS L84BC        ;; Exit if not IDFS
+ELIF PATCH_XDFS
+       CMP #&50         ;; Check against lowest XDFS handle
+       BCC L84BC        ;; Exit if not XDFS
+       CMP #&5A         ;; Check against highest XDFS handle
+       BCS L84BC        ;; Exit if not XDFS **NB** currently the same as IDFS, can be changed
+
 ELSE
        CMP #&30         ;; Check against lowest ADFS handle
        BCC L84BC        ;; Exit if not ADFS
@@ -4206,6 +4214,8 @@ ENDIF
 .L9A9C 
 IF PATCH_IDFS
        EQUS "E.-IDFS-$.!BOOT" 
+ELIF PATCH_XDFS
+       EQUS "E.-XDFS-$.!BOOT" 
 ELSE
        EQUS "E.-ADFS-$.!BOOT"  ;; *Exec option
 ENDIF
@@ -4366,6 +4376,8 @@ ENDIF
 .L9B4A 
 IF PATCH_IDFS
        LDY #&0A         ;; Y=10 to select IDFS
+ELIF PATCH_XDFS
+       LDY #&0A         ;; Y=10 to select IDFS  **NB** same as IDFS, can be changed
 ELSE
        LDY #&08         ;; Y=8 to select ADFS
 ENDIF
@@ -4376,6 +4388,8 @@ ENDIF
 .L9B4C
 IF PATCH_IDFS
        CPY #&0A
+ELIF PATCH_XDFS
+       CPY #&0A      ;; Same as IDFS, can be changed
 ELSE
        CPY #&08
 ENDIF
@@ -4394,18 +4408,22 @@ ENDIF
        INX              ;; No key pressed?
        BEQ L9B74        ;; Yes, jump to select FS
        DEX
-IF NOT(PATCH_IDFS)
+IF NOT(PATCH_IDFS) AND NOT(PATCH_XDFS)
        CPX #&79         ;; '->' pressed?  ;; Only for ADFS
        BEQ L9B74        ;; Yes
 ENDIF
 IF PATCH_IDFS
        CPX #&25         ;; 'I' pressed?
+ELIF PATCH_XDFS
+       CPX #&42         ;; 'X' pressed?
 ELSE
        CPX #&41         ;; 'A' pressed?
 ENDIF
        BEQ L9B74        ;; Yes
 IF PATCH_IDFS
        CPX #&45         ;; 'J' pressed?
+ELIF PATCH_XDFS
+       CPX #&44         ;; 'Y' pressed?
 ELSE
        CPX #&43         ;; 'F' pressed?
 ENDIF
@@ -4437,6 +4455,8 @@ ENDIF
        PLA              ;; With Hard BREAK and power on
 IF PATCH_IDFS
        LDA #&45         ;; ...change key pressed to 'jidfs'
+ELIF PATCH_XDFS
+       LDA #&44         ;; ...change key pressed to 'yxdfs'
 ELSE
        LDA #&43         ;; ...change key pressed to 'fadfs'
 ENDIF
@@ -4444,6 +4464,8 @@ ENDIF
 .L9B85 JSR L92A8        ;; Print FS banner
 IF PATCH_IDFS
        EQUS "Acorn IDFS", &0D, &8D
+ELIF PATCH_XDFS
+       EQUS "Acorn XDFS", &0D, &8D
 ELSE
        EQUS "Acorn ADFS", &0D, &8D
 ENDIF       
@@ -4515,6 +4537,8 @@ ENDIF
 .L9C10 PLA              ;; Get selection flag from stack
 IF PATCH_IDFS
        CMP #&45         ;; '*jidfs'/J-Break type of selection?
+ELIF PATCH_XDFS
+       CMP #&44         ;; '*yxdfs'/Y-Break type of selection?
 ELSE
        CMP #&43         ;; '*fadfs'/F-Break type of selection?
 ENDIF
@@ -4665,7 +4689,10 @@ IF PATCH_IDFS
        EQUB &0A         ;; Filing system number (as VFS)
        EQUB &59         ;; Highest handle used (as VFS)
        EQUB &50         ;; Lowest handle used (as VFS)
-       
+ELIF PATCH_XDFS
+       EQUB &0A         ;; Filing system number (as VFS)
+       EQUB &59         ;; Highest handle used (as VFS)
+       EQUB &50         ;; Lowest handle used (as VFS)  **NB** as IDFS but can be changd
 ELSE
        EQUB &08         ;; Filing system number
        EQUB &39         ;; Highest handle used
@@ -4675,6 +4702,8 @@ ENDIF
 .L9D01
 IF PATCH_IDFS
        EQUS "sfdi"      ;; "idfs" filing system name
+ELIF PATCH_XDFS
+       EQUS "sfdx"      ;; "xdfs" filing system name
 ELSE
        EQUS "sfda"      ;; "adfs" filing system name
 ENDIF
@@ -4707,6 +4736,8 @@ ENDIF
        ORA #&20         ;; Force to lower case
 IF PATCH_IDFS
        CMP #&6A         ;; Is it 'j' of 'jidfs'?
+ELIF PATCH_XDFS
+       CMP #&79         ;; Is it 'y' of 'yxdfs'?
 ELSE
        CMP #&66         ;; Is it 'f' of 'fadfs'?
 ENDIF
@@ -4714,6 +4745,8 @@ ENDIF
        PLA              ;; Lose previos flag
 IF PATCH_IDFS
        LDA #&45         ;; Change flags to indicate '*jidfs'
+ELIF PATCH_XDFS
+       LDA #&44         ;; Change flags to indicate '*yxdfs'
 ELSE
        LDA #&43         ;; Change flags to indicate '*fadfs'
 ENDIF
@@ -4755,12 +4788,16 @@ ENDIF
        LDA &EF          ;; Get OSWORD number
 IF PATCH_IDFS
        CMP #&60         ;; VFS OSWORD base
+ELIF PATCH_XDFS
+       CMP #&60         ;; OSWORD base, as IDFS but can be changed
 ELSE
        CMP #&70
 ENDIF
        BCC L9DBA        ;; If <&70, exit unclaimed
 IF PATCH_IDFS
        CMP #&64         ;; VFS highest OSWORD number (n.b. VFS also supports OSWORD &64 - not yet implemented here)
+ELIF PATCH_XDFS
+       CMP #&64         ;; as IDFS, but can be changed
 ELSE
        CMP #&74
 ENDIF
@@ -4776,6 +4813,8 @@ ENDIF
        JSR &FFDA        ;; Get current filing system
 IF PATCH_IDFS
        CMP #&0A         ;; Is is IDFS?
+ELIF PATCH_XDFS
+       CMP #&0A         ;; Is is XDFS? (n.b. same as IDFS but can be changed)
 ELSE
        CMP #&08         ;; Is is ADFS?
 ENDIF
@@ -4784,6 +4823,8 @@ ENDIF
 .L9D76 LDA &EF          ;; Get OSWORD number
 IF PATCH_IDFS
        CMP #&62         ;; Is it &62?
+ELIF PATCH_XDFS
+       CMP #&62         ;; Is it &62?  **NB** As IDFS but can be changed
 ELSE
        CMP #&72         ;; Is if &72?
 ENDIF
@@ -4863,6 +4904,8 @@ ENDIF
 .L9DC0
 IF PATCH_IDFS
        CMP #&63
+ELIF PATCH_XDFS
+       CMP #&63          ;; as IDFS but can be changed
 ELSE
        CMP #&73
 ENDIF
@@ -4876,6 +4919,8 @@ ENDIF
 .L9DD0 
 IF PATCH_IDFS
        CMP #&60
+ELIF PATCH_XDFS
+       CMP #&60          ;; as IDFS but can be changed
 ELSE
        CMP #&70
 ENDIF
@@ -4891,6 +4936,8 @@ ENDIF
 .L9DE3
 IF PATCH_IDFS
        CMP #&61
+ELIF PATCH_XDFS
+       CMP #&61           ;; as IDFS but can be changed
 ELSE
        CMP #&71
 ENDIF       
@@ -4910,6 +4957,8 @@ ELIF PATCH_IDE
        EQUS &0D, "Advanced DFS 1.53", &8D
 ELIF PATCH_IDFS
        EQUS &0D, "Internal ADFS 1.50", &8D
+ELIF PATCH_XDFS
+       EQUS &0D, "External ADFS 1.50", &8D
 ELSE
        EQUS &0D, "Advanced DFS 1.50", &8D
 ENDIF
@@ -4923,6 +4972,8 @@ ENDIF
        JSR L92A8
 IF PATCH_IDFS
        EQUS "  IDFS", &8D
+ELIF PATCH_XDFS
+       EQUS "  XDFS", &8D
 ELSE
        EQUS "  ADFS", &8D
 ENDIF
@@ -5152,6 +5203,9 @@ ENDIF
 IF PATCH_IDFS
        LDX #&50         ;; Lowest handle=&50 (as VFS)
        LDY #&59         ;; Highest handle=&59 (as VFS)
+ELIF PATCH_XDFS
+       LDX #&50         ;; Lowest handle=&50 (as VFS) NB as IDFS but can be changed
+       LDY #&59         ;; Highest handle=&59 (as VFS)
 ELSE
        LDX #&30         ;; Lowest handle=&30
        LDY #&39         ;; Highest handle=&39
@@ -5338,6 +5392,8 @@ ENDIF
        TXA
 IF PATCH_IDFS
        ADC #&50             ;; Add to base channel number
+ELIF PATCH_XDFS
+       ADC #&50             ;; Add to base channel number, as IDFS but can be changed
 ELSE
        ADC #&30
 ENDIF
@@ -6361,6 +6417,8 @@ ENDIF
        BNE LA984        ;; Jump with OSARGS Y=0, info on filing system
 IF PATCH_IDFS
        LDA #&0A         ;; OSARGS 0,0 - return filing system number (&A)
+ELIF PATCH_XDFS
+       LDA #&0A         ;; OSARGS 0,0 - return filing system number (&A)  (as IDFS but can be changed)
 ELSE
        LDA #&08         ;; OSARGS 0,0 - return filing system number (&8)
 ENDIF
@@ -6952,6 +7010,8 @@ ENDIF
        STY &C2D5
 IF PATCH_IDFS
        CPY #&5A         ;; Check channel is in range
+ELIF PATCH_XDFS
+       CPY #&5A         ;; Check channel is in range (as IDFS but can be changed)
 ELSE
        CPY #&3A         ;; Check channel is in range
 ENDIF
@@ -6960,6 +7020,8 @@ ENDIF
        SEC
 IF PATCH_IDFS 
        SBC #&50
+ELIF PATCH_XDFS
+       SBC #&50         ;; as IDFS but can be changed
 ELSE
        SBC #&30
 ENDIF
@@ -7665,8 +7727,10 @@ ENDIF
        STA &C3AC,X
        TXA
        CLC
-IF PATCH_IDFS       
+IF PATCH_IDFS
        ADC #&50      ;; Add base channel number
+ELIF PATCH_XDFS
+       ADC #&50      ;; Add base channel number (as IDFS but can be changed)
 ELSE
        ADC #&30
 ENDIF
@@ -7771,6 +7835,8 @@ ENDIF
        CLC
 IF PATCH_IDFS
        ADC #&50         ;; A=channel number for this offset
+ELIF PATCH_XDFS
+       ADC #&50         ;; A=channel number for this offset (as IDFS but can be changed)
 ELSE
        ADC #&30         ;; A=channel number for this offset
 ENDIF
