@@ -304,14 +304,14 @@ ENDIF
 .L8111 LDY #&06
        LDA (&B0),Y      ;; Get drive
        ORA &C317        ;; OR with current drive
-       
+
 IF PATCH_IDFS
        CMP #&FF         :\                                    ;; In VFS but probably not necessary
        BNE skipinc        :\ If drive<>&FF, use it            ;; In VFS but probably not necessary
        INC A            :\ Change drive &FF to &00            ;; In VFS but probably not necessary
 .skipinc
 ENDIF
-       
+
 IF INCLUDE_FLOPPY
        BMI L80F0        ;; Jump back with 4,5,6,7 as floppies
 ENDIF
@@ -968,7 +968,7 @@ ENDIF
 .L8395 JSR L8451
        JMP L83A2
 ;;
-.L839B 
+.L839B
 ;;IF PATCH_IDFS
 ;;       CMP #&5A      ;; Channel guesswork
 ;;ELSE
@@ -1130,7 +1130,7 @@ ENDIF
 ;;
 ;; Close Spool or Exec if ADFS channel
 ;; -----------------------------------
-.L84CB 
+.L84CB
 IF PATCH_IDFS
        CMP #&50         ;; Check against lowest IDFS handle
        BCC L84BC        ;; Exit if not IDFS
@@ -4166,7 +4166,7 @@ ELSE
 IF PATCH_IDFS
        EOR #&FF         ;; Invert byte when using internal bus  *** NECESSARY - BUT ::: confirmed in VFS  **AFTER** label in previous JSR instruction)
 ENDIF
- 
+
        STA HDBASE
 IF PATCH_IDFS
        EOR #&FF         ;; Invert byte when using internal bus (n.b. VFS re-inverts at this point)  *** NECESSARY - confirmed in VFS
@@ -4211,11 +4211,11 @@ ENDIF
 .L9A94 EQUS "$.!BOOT"   ;; End of *Load and *Run option
        EQUB &0D
 ;;
-.L9A9C 
+.L9A9C
 IF PATCH_IDFS
-       EQUS "E.-IDFS-$.!BOOT" 
+       EQUS "E.-IDFS-$.!BOOT"
 ELIF PATCH_XDFS
-       EQUS "E.-XDFS-$.!BOOT" 
+       EQUS "E.-XDFS-$.!BOOT"
 ELSE
        EQUS "E.-ADFS-$.!BOOT"  ;; *Exec option
 ENDIF
@@ -4373,7 +4373,7 @@ ENDIF
 ;;
 ;; Select ADFS
 ;; ===========
-.L9B4A 
+.L9B4A
 IF PATCH_IDFS
        LDY #&0A         ;; Y=10 to select IDFS
 ELIF PATCH_XDFS
@@ -4468,7 +4468,7 @@ ELIF PATCH_XDFS
        EQUS "Acorn XDFS", &0D, &8D
 ELSE
        EQUS "Acorn ADFS", &0D, &8D
-ENDIF       
+ENDIF
 ;;
 ;; Select ADFS
 ;; ===========
@@ -4684,7 +4684,7 @@ ENDIF
 ;;
 ;; Filing system information
 ;; -------------------------
-.L9CFA 
+.L9CFA
 IF PATCH_IDFS
        EQUB &0A         ;; Filing system number (as VFS)
        EQUB &59         ;; Highest handle used (as VFS)
@@ -4887,7 +4887,7 @@ ENDIF
 ;; ---------------------------------
 .L9DB0 LDY #&00         ;; Point to result byte
        STA (&BA),Y      ;; Store result in control block
-       
+
 .L9DB4 LDX &F4          ;; Put ROM number in X
        PLY              ;; Restore Y
        LDA #&00         ;; A=0 to claim OSWORD
@@ -4916,7 +4916,7 @@ ENDIF
        DEY
        BPL L9DC6
        BMI L9DB4
-.L9DD0 
+.L9DD0
 IF PATCH_IDFS
        CMP #&60
 ELIF PATCH_XDFS
@@ -4940,7 +4940,7 @@ ELIF PATCH_XDFS
        CMP #&61           ;; as IDFS but can be changed
 ELSE
        CMP #&71
-ENDIF       
+ENDIF
        BNE L9DBA
        JSR LA1EA
        LDY #&03
@@ -5198,7 +5198,7 @@ ENDIF
 ;;
 ;; FSC 7 - Handle Request
 ;; ======================
-.L9FFC 
+.L9FFC
 
 IF PATCH_IDFS
        LDX #&50         ;; Lowest handle=&50 (as VFS)
@@ -5260,7 +5260,7 @@ ENDIF
        BCC LA053
        CPX #&3A
        BCS LA053
-;;ENDIF       
+;;ENDIF
        JSR &FFF4
        LDX #&00
 .LA053 PLA
@@ -7018,7 +7018,7 @@ ENDIF
        BCS LACF8        ;; Too high - error
        TYA
        SEC
-IF PATCH_IDFS 
+IF PATCH_IDFS
        SBC #&50
 ELIF PATCH_XDFS
        SBC #&50         ;; as IDFS but can be changed
@@ -9378,9 +9378,16 @@ ENDIF
 
 IF PATCH_SD
 include "MMC.asm"
+
+SD_MM =? FALSE
+IF SD_MM
+include "MMC_MemoryMapped.asm"
+ELSE
 include "MMC_UserPort.asm"
+ENDIF
+
 ENDIF
 
 PRINT "    code ends at",~P%," (",(&C000 - P%), "bytes free )"
 
-SAVE "", &8000, &C000
+SAVE &8000, &C000

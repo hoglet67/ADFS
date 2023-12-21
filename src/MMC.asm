@@ -41,12 +41,12 @@ write_block      =&58
 
 
 ;; **** Set-up MMC command sequence ****
-;; C=0 for read, C=1 for write 
+;; C=0 for read, C=1 for write
 .MMC_SetupRW
      LDA #write_block
      BCS MMC_SetCommand
      LDA #read_single_block
-        
+
 ;; **** Reset MMC Command Sequence ****
 ;; A=cmd, token=&FF
 
@@ -125,10 +125,10 @@ write_block      =&58
      JMP iok
 
 .isdhc
-     JSR UP_ReadByteX
-     JSR UP_ReadByteX
-     JSR UP_ReadByteX
-     JSR UP_ReadByteX
+     JSR MMC_GetByte
+     JSR MMC_GetByte
+     JSR MMC_GetByte
+     JSR MMC_GetByte
 .isdhc2
      LDA #&77
      JSR MMC_SetCommand
@@ -145,12 +145,12 @@ write_block      =&58
      JSR MMC_DoCommand
      CMP #&00
      BNE ifail
-     JSR UP_ReadByteX
+     JSR MMC_GetByte
      AND #&40
      PHA
-     JSR UP_ReadByteX
-     JSR UP_ReadByteX
-     JSR UP_ReadByteX
+     JSR MMC_GetByte
+     JSR MMC_GetByte
+     JSR MMC_GetByte
      PLA
      BNE iok
      LDA #2
@@ -217,7 +217,7 @@ write_block      =&58
      EQUB &CD
      EQUS "Card?"
      EQUB &00
-     
+
 }
 
 ;; Translate the sector number into a SPI Command Address
@@ -257,9 +257,9 @@ write_block      =&58
     INY
     DEX
     BNE loop
-}    
+}
 
-        
+
 .setAddressFromStack
 {
 ;; Process the drive number
@@ -275,7 +275,7 @@ write_block      =&58
      ROL A
      ROL A
      AND #&07
-     CMP numdrives% ;; check against number of ADFS partitions found 
+     CMP numdrives% ;; check against number of ADFS partitions found
      BCS invalidDrive
 
      ASL A          ;; Shift into bits 4-2 to index the drive table
@@ -295,7 +295,7 @@ write_block      =&58
      INY
      TYA
      AND #&03
-     BNE addDriveOffset 
+     BNE addDriveOffset
 
      LDX #3          ;; sector number is 4 bytes
 ;;
@@ -393,7 +393,7 @@ write_block      =&58
 ;; Partition entry 1 is 1CE
 ;; Partition entry 2 is 1DE
 ;; Partition entry 3 is 1EE
-        
+
 ;; Partition entry has following structure
 ;; 00 = status (whether bootable)
 ;; 01-03 = CHS address of first absolute sector in partition
@@ -413,7 +413,7 @@ write_block      =&58
      DEX
      BNE loop
      STZ numdrives%             ;; clear the number of drives
-        
+
 .testPartition
      LDY #&04
      LDA (datptr%),Y
@@ -427,7 +427,7 @@ write_block      =&58
      INX
      INY
      CPY #&0C
-     BNE copyLBA     
+     BNE copyLBA
      CPX #(MAX_DRIVES * 4)
      BEQ done
 
@@ -449,7 +449,7 @@ write_block      =&58
      EQUB &CD
      EQUS "No MBR!"
      EQUB &00
-    
+
 .noADFS
      JSR L8372
      EQUB &CD
